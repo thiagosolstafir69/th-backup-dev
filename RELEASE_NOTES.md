@@ -1,36 +1,40 @@
-# Release Notes v1.0.4
+# Release Notes v1.0.5
 
-## 🛠️ Correções e Melhorias Importantes
+## 🐛 Correção Crítica: Cancelamento Agora Funciona Corretamente
 
-### 🔧 O que mudou nesta versão
+### 🔧 O que foi corrigido nesta versão
 
-- ✅ **Pausa corrigida**: Agora a pausa funciona durante todo o processo, inclusive na compactação
-- ✅ **Botão de cancelar**: Novo botão vermelho para cancelar o backup completamente
-- ✅ **Cancelamento efetivo**: Para imediatamente todo o processo de backup
-- ✅ **Limpeza de recursos**: Remove arquivos temporários ao cancelar
-- ✅ **Verificação contínua**: Sistema verifica pausa e cancelamento periodicamente
-- ✅ **Mensagens claras**: Exibe "❌ Backup cancelado" quando cancelado
+- ✅ **Cancelamento efetivo**: Agora quando você cancela, o arquivo ZIP NÃO é gerado
+- ✅ **Arquivo não é movido**: O backup cancelado não vai para a pasta de destino
+- ✅ **Limpeza automática**: Arquivo temporário é removido automaticamente ao cancelar
+- ✅ **Verificação mais rápida**: Checa cancelamento a cada 100ms (antes era 200ms)
+- ✅ **Mensagem de limpeza**: Exibe "Arquivo temporário removido" quando cancela
 
-### 🆕 Novo Botão de Cancelar
+### 🐛 Problema corrigido da v1.0.4
 
-- **Cor vermelha** para fácil identificação
-- **Para completamente** o backup em andamento
-- **Limpa recursos** e arquivos temporários
-- Aparece junto com o botão de pausar durante o backup
+**Antes (v1.0.4)**: 
+- ❌ Arquivo ZIP continuava sendo gerado mesmo após cancelar
+- ❌ Arquivo era movido para o destino
+- ❌ Backup "cancelado" ficava salvo
+
+**Agora (v1.0.5)**:
+- ✅ Processo para imediatamente ao cancelar
+- ✅ Arquivo temporário é removido
+- ✅ Nada é salvo no destino
 
 ### 📋 Todas as funcionalidades
 
 - Seleção de pasta de origem para backup
 - Seleção de destino para salvar o backup
-- **Pausar e continuar backup em andamento** (CORRIGIDO)
-- **Cancelar backup a qualquer momento** ⭐ NOVO
+- Pausar e continuar backup em andamento
+- **Cancelar backup a qualquer momento** (CORRIGIDO)
 - Compactação automática em formato ZIP
 - Interface gráfica simples e intuitiva (700x670 pixels)
 - Suporte para macOS (Apple Silicon e Intel)
 
 ### 📦 Como instalar
 
-1. Baixe o arquivo `BackupDeveloper-1.0.4.dmg`
+1. Baixe o arquivo `BackupDeveloper-1.0.5.dmg`
 2. Abra o arquivo DMG
 3. Arraste o app para a pasta Applications
 4. Na primeira execução, vá em **Configurações do Sistema** → **Privacidade e Segurança** → **Abrir mesmo assim**
@@ -40,7 +44,7 @@
 - **Botão azul "Executar backup"**: Inicia o processo de backup
 - **Botão laranja "Pausar"**: Pausa o backup (muda para verde "Continuar")
 - **Botão verde "Continuar"**: Retoma o backup de onde parou
-- **Botão vermelho "Cancelar"**: Cancela completamente o backup
+- **Botão vermelho "Cancelar"**: Cancela completamente o backup ✅ AGORA FUNCIONA
 
 ### 🖥️ Compatibilidade
 
@@ -62,7 +66,7 @@
 
 ### 📝 Arquivo disponível para download
 
-- `BackupDeveloper-1.0.4.dmg` (107 MB) - Instalador para macOS
+- `BackupDeveloper-1.0.5.dmg` (107 MB) - Instalador para macOS
 
 ---
 
@@ -73,9 +77,11 @@ Se você já tem uma versão anterior instalada, basta:
 2. Arrastar para Applications (substituir quando solicitado)
 3. Pronto!
 
-### 🐛 Correções da v1.0.3
+### 📊 Histórico de correções
 
-- Corrigido: Backup continuava mesmo quando pausado
-- Corrigido: Não havia como cancelar o backup uma vez iniciado
-- Adicionado: Verificação de pausa durante a compactação ZIP
-- Adicionado: Sistema de cancelamento com limpeza de recursos
+**v1.0.5** - Correção: Cancelamento agora funciona corretamente  
+**v1.0.4** - Adiciona botão de cancelar e corrige pausa  
+**v1.0.3** - Adiciona pausa e continuar  
+**v1.0.2** - Aumenta altura da janela  
+**v1.0.1** - Aumenta tamanho da janela  
+**v1.0.0** - Versão inicial
