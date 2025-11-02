@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
-const { createBackup, togglePause } = require('./src/backup');
+const { createBackup, togglePause, cancelBackup } = require('./src/backup');
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -61,4 +61,9 @@ ipcMain.handle('start-backup', async (event) => {
 ipcMain.handle('toggle-pause', async () => {
   const isPaused = togglePause();
   return { isPaused };
+});
+
+ipcMain.handle('cancel-backup', async () => {
+  cancelBackup();
+  return { cancelled: true };
 });

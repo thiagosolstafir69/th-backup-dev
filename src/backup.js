@@ -8,9 +8,11 @@ const SOURCE_DIR = '/Users/thiago/Developer';
 const DEST_DIR =
   '/Users/thiago/Library/CloudStorage/GoogleDrive-thiagowip@gmail.com/Meu Drive/Backup-developer';
 
-// Controle de pausa
+// Controle de pausa e cancelamento
 let isPaused = false;
+let isCancelled = false;
 let pauseResolve = null;
+let archiveInstance = null;
 
 const pad = (value) => value.toString().padStart(2, '0');
 
@@ -38,14 +40,25 @@ const formatBytes = (bytes) => {
 };
 
 const checkPause = async (onProgress) => {
-  if (isPaused) {
-    onProgress({
-      type: 'status',
-      text: '⏸️ Backup pausado. Clique em "Continuar" para retomar.'
-    });
-    await new Promise((resolve) => {
-      pauseResolve = resolve;
-    });
+  while (isPaused && !isCancelled) {
+    if (!pauseResolve) {
+      onProgress({
+        type: 'status',
+        text: '⏸️ Backup pausado. Clique em "Continuar" para retomar.'
+      });
+      await new Promise((resolve) => {
+        pauseResolve = resolve;
+      });
+      pauseResolve = null;
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  if (isCancelled) {
+    throw new Error('Backup cancelado pelo usuário');
+  }
+  
+  if (!isPaused) {
     onProgress({
       type: 'status',
       text: '▶️ Backup retomado.'
@@ -120,11 +133,50 @@ const zipDirectory = (sourceDir, outPath, totalSize, onProgress) =>
   new Promise((resolve, reject) => {
     const output = fs.createWriteStream(outPath);
     const archive = archiver('zip', { zlib: { level: 9 } });
+    archiveInstance = archive;
     let lastPercent = -1;
+    let checkInterval = null;
 
-    output.on('close', resolve);
-    output.on('end', resolve);
-    archive.on('progress', (progress) => {
+    const cleanup = () => {
+      if (checkInterval) {
+        clearInterval(checkInterval);
+      }
+      archiveInstance = null;
+    };
+
+    // Verificar cancelamento periodicamente
+    checkInterval = setInterval(() => {
+      if (isCancelled) {
+        cleanup();
+        archive.abort();
+        output.destroy();
+        reject(new Error('Backup cancelado pelo usuário'));
+      }
+    }, 200);
+
+    output.on('close', () => {
+      cleanup();
+      resolve();
+    });
+    output.on('end', () => {
+      cleanup();
+      resolve();
+    });
+    output.on('error', (err) => {
+      cleanup();
+      reject(err);
+    });
+
+    archive.on('progress', async (progress) => {
+      // Verificar pausa durante a compactação
+      if (isPaused && !isCancelled) {
+        archive.pause();
+        await checkPause(onProgress);
+        if (!isCancelled) {
+          archive.resume();
+        }
+      }
+
       const processedBytes = progress.fs?.processedBytes ?? 0;
       if (totalSize > 0) {
         const percent = Math.min(100, Math.round((processedBytes / totalSize) * 100));
@@ -145,13 +197,19 @@ const zipDirectory = (sourceDir, outPath, totalSize, onProgress) =>
         });
       }
     });
+    
     archive.on('warning', (err) => {
       if (err.code === 'ENOENT') {
         return;
       }
+      cleanup();
       reject(err);
     });
-    archive.on('error', reject);
+    
+    archive.on('error', (err) => {
+      cleanup();
+      reject(err);
+    });
 
     archive.pipe(output);
     archive.directory(sourceDir, false);
@@ -179,13 +237,27 @@ const togglePause = () => {
   return isPaused;
 };
 
-const resetPauseState = () => {
+const cancelBackup = () => {
+  isCancelled = true;
   isPaused = false;
+  if (pauseResolve) {
+    pauseResolve();
+    pauseResolve = null;
+  }
+  if (archiveInstance) {
+    archiveInstance.abort();
+  }
+};
+
+const resetBackupState = () => {
+  isPaused = false;
+  isCancelled = false;
   pauseResolve = null;
+  archiveInstance = null;
 };
 
 const createBackup = async (onProgress = () => {}) => {
-  resetPauseState();
+  resetBackupState();
   await ensurePaths();
 
   const timestamp = generateTimestamp();
@@ -234,5 +306,6 @@ const createBackup = async (onProgress = () => {}) => {
 
 module.exports = {
   createBackup,
-  togglePause
+  togglePause,
+  cancelBackup
 };

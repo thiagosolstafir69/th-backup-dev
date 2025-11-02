@@ -1,6 +1,7 @@
 window.addEventListener('DOMContentLoaded', () => {
   const triggerButton = document.getElementById('backup-button');
   const pauseButton = document.getElementById('pause-button');
+  const cancelButton = document.getElementById('cancel-button');
   const statusText = document.getElementById('status');
   const progressList = document.getElementById('progress');
   const progressBar = document.getElementById('progress-bar');
@@ -9,6 +10,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (
     !triggerButton ||
     !pauseButton ||
+    !cancelButton ||
     !statusText ||
     !progressList ||
     !progressBar ||
@@ -80,9 +82,25 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  cancelButton.addEventListener('click', async () => {
+    try {
+      await window.backup.cancel();
+      setStatus('Backup cancelado pelo usuário', 'error');
+      appendProgress('❌ Backup cancelado');
+      pauseButton.style.display = 'none';
+      cancelButton.style.display = 'none';
+      triggerButton.disabled = false;
+      isBackupRunning = false;
+      isPaused = false;
+    } catch (error) {
+      console.error('Erro ao cancelar:', error);
+    }
+  });
+
   triggerButton.addEventListener('click', async () => {
     triggerButton.disabled = true;
     pauseButton.style.display = 'block';
+    cancelButton.style.display = 'block';
     pauseButton.textContent = 'Pausar';
     pauseButton.style.backgroundColor = '#ff9500';
     pauseButton.style.borderColor = '#ff9500';
@@ -105,6 +123,7 @@ window.addEventListener('DOMContentLoaded', () => {
     } finally {
       triggerButton.disabled = false;
       pauseButton.style.display = 'none';
+      cancelButton.style.display = 'none';
       isBackupRunning = false;
       isPaused = false;
     }
