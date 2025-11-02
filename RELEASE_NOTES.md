@@ -1,20 +1,25 @@
-# Release Notes v1.0.0
+# Release Notes v1.0.1
 
-## 🎉 Primeira versão do Backup Developer
+## ✨ Melhorias na Interface
 
-Aplicação Electron para backup de arquivos e projetos de desenvolvedores.
+### 🔧 O que mudou nesta versão
 
-### ✨ Funcionalidades
+- ✅ **Janela maior**: Aumentado de 480x360 para 700x600 pixels
+- ✅ **Melhor visualização**: Lista de progresso agora tem 300px de altura
+- ✅ **Sem scroll na janela**: Apenas a área de informações do backup tem scroll
+- ✅ **Interface aprimorada**: Área de progresso com borda e fundo destacado
 
-- ✅ Seleção de pasta de origem para backup
-- ✅ Seleção de destino para salvar o backup
-- ✅ Compactação automática em formato ZIP
-- ✅ Interface gráfica simples e intuitiva
-- ✅ Suporte para macOS (Apple Silicon e Intel)
+### 📋 Todas as funcionalidades
+
+- Seleção de pasta de origem para backup
+- Seleção de destino para salvar o backup
+- Compactação automática em formato ZIP
+- Interface gráfica simples e intuitiva
+- Suporte para macOS (Apple Silicon e Intel)
 
 ### 📦 Como instalar
 
-1. Baixe o arquivo `BackupDeveloper-1.0.0.dmg`
+1. Baixe o arquivo `BackupDeveloper-1.0.1.dmg`
 2. Abra o arquivo DMG
 3. Arraste o app para a pasta Applications
 4. Na primeira execução, vá em **Configurações do Sistema** → **Privacidade e Segurança** → **Abrir mesmo assim**
@@ -39,5 +44,14 @@ Aplicação Electron para backup de arquivos e projetos de desenvolvedores.
 
 ### 📝 Arquivo disponível para download
 
-- `BackupDeveloper-1.0.0.dmg` (107 MB) - Instalador para macOS
+- `BackupDeveloper-1.0.1.dmg` (107 MB) - Instalador para macOS
+
+---
+
+### 🔄 Atualizando da v1.0.0
+
+Se você já tem a versão 1.0.0 instalada, basta:
+1. Baixar o novo DMG
+2. Arrastar para Applications (substituir quando solicitado)
+3. Pronto!
 

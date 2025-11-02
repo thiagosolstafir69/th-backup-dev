@@ -82,11 +82,11 @@ backup-dev/
 
 Você pode baixar a versão mais recente do aplicativo diretamente das [Releases do GitHub](https://github.com/thiagosolstafir69/backup-dev/releases).
 
-**Link direto:** [Baixar BackupDeveloper-1.0.0.dmg](https://github.com/thiagosolstafir69/backup-dev/releases/download/v1.0.0/BackupDeveloper-1.0.0.dmg)
+**Link direto:** [Baixar BackupDeveloper-1.0.1.dmg](https://github.com/thiagosolstafir69/backup-dev/releases/download/v1.0.1/BackupDeveloper-1.0.1.dmg)
 
 ## 📱 Instalando o DMG
 
-1. Baixe o arquivo `BackupDeveloper-1.0.0.dmg` das Releases
+1. Baixe o arquivo `BackupDeveloper-1.0.1.dmg` das Releases
 2. Abra o arquivo DMG
 3. Arraste o app **Backup Developer** para a pasta Applications
 4. Na primeira execução, vá em **Configurações do Sistema** → **Privacidade e Segurança**
