@@ -4,8 +4,8 @@ const { createBackup } = require('./src/backup');
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 480,
-    height: 360,
+    width: 700,
+    height: 600,
     resizable: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
