@@ -98,7 +98,10 @@
   <body>
     <h1>Backup Developer</h1>
     <p>Clique no botão para gerar o backup da pasta /Users/thiago/Developer.</p>
-    <button id="backup-button">Executar backup agora</button>
+    <div style="display: flex; gap: 12px;">
+      <button id="backup-button">Executar backup agora</button>
+      <button id="pause-button" style="display: none; background-color: #ff9500; border-color: #ff9500;">Pausar</button>
+    </div>
     <div class="status" id="status" data-state="idle">Aguardando ação.</div>
     <div class="progress-wrapper">
       <div class="progress-track">

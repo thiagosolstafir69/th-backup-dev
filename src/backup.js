@@ -8,6 +8,10 @@ const SOURCE_DIR = '/Users/thiago/Developer';
 const DEST_DIR =
   '/Users/thiago/Library/CloudStorage/GoogleDrive-thiagowip@gmail.com/Meu Drive/Backup-developer';
 
+// Controle de pausa
+let isPaused = false;
+let pauseResolve = null;
+
 const pad = (value) => value.toString().padStart(2, '0');
 
 const generateTimestamp = () => {
@@ -33,12 +37,29 @@ const formatBytes = (bytes) => {
   return `${value.toFixed(value >= 10 || i === 0 ? 0 : 1)} ${sizes[i]}`;
 };
 
+const checkPause = async (onProgress) => {
+  if (isPaused) {
+    onProgress({
+      type: 'status',
+      text: '⏸️ Backup pausado. Clique em "Continuar" para retomar.'
+    });
+    await new Promise((resolve) => {
+      pauseResolve = resolve;
+    });
+    onProgress({
+      type: 'status',
+      text: '▶️ Backup retomado.'
+    });
+  }
+};
+
 const collectSourceStats = async (sourceDir, onProgress) => {
   let totalSize = 0;
   let totalFiles = 0;
   const stack = [sourceDir];
 
   while (stack.length > 0) {
+    await checkPause(onProgress);
     const currentDir = stack.pop();
     try {
       const dirHandle = await fsp.opendir(currentDir);
@@ -54,6 +75,7 @@ const collectSourceStats = async (sourceDir, onProgress) => {
         if (dirent.isFile()) {
           totalFiles += 1;
           if (totalFiles % 500 === 0) {
+            await checkPause(onProgress);
             onProgress({
               type: 'status',
               text: `Escaneando arquivos... ${totalFiles} encontrados`
@@ -144,7 +166,26 @@ const ensurePaths = async () => {
   await fs.ensureDir(DEST_DIR);
 };
 
+const togglePause = () => {
+  if (isPaused) {
+    isPaused = false;
+    if (pauseResolve) {
+      pauseResolve();
+      pauseResolve = null;
+    }
+  } else {
+    isPaused = true;
+  }
+  return isPaused;
+};
+
+const resetPauseState = () => {
+  isPaused = false;
+  pauseResolve = null;
+};
+
 const createBackup = async (onProgress = () => {}) => {
+  resetPauseState();
   await ensurePaths();
 
   const timestamp = generateTimestamp();
@@ -192,5 +233,6 @@ const createBackup = async (onProgress = () => {}) => {
 };
 
 module.exports = {
-  createBackup
+  createBackup,
+  togglePause
 };

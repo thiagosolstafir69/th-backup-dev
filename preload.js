@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('backup', {
   start: () => ipcRenderer.invoke('start-backup'),
+  togglePause: () => ipcRenderer.invoke('toggle-pause'),
   onProgress: (callback) => {
     if (typeof callback !== 'function') {
       return () => {};

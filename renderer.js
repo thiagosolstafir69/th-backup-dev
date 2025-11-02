@@ -1,5 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
   const triggerButton = document.getElementById('backup-button');
+  const pauseButton = document.getElementById('pause-button');
   const statusText = document.getElementById('status');
   const progressList = document.getElementById('progress');
   const progressBar = document.getElementById('progress-bar');
@@ -7,6 +8,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   if (
     !triggerButton ||
+    !pauseButton ||
     !statusText ||
     !progressList ||
     !progressBar ||
@@ -15,6 +17,9 @@ window.addEventListener('DOMContentLoaded', () => {
   ) {
     return;
   }
+
+  let isBackupRunning = false;
+  let isPaused = false;
 
   const appendProgress = (message) => {
     const item = document.createElement('li');
@@ -56,8 +61,33 @@ window.addEventListener('DOMContentLoaded', () => {
     setProgress(0);
   };
 
+  pauseButton.addEventListener('click', async () => {
+    try {
+      const result = await window.backup.togglePause();
+      isPaused = result.isPaused;
+      
+      if (isPaused) {
+        pauseButton.textContent = 'Continuar';
+        pauseButton.style.backgroundColor = '#34c759';
+        pauseButton.style.borderColor = '#34c759';
+      } else {
+        pauseButton.textContent = 'Pausar';
+        pauseButton.style.backgroundColor = '#ff9500';
+        pauseButton.style.borderColor = '#ff9500';
+      }
+    } catch (error) {
+      console.error('Erro ao pausar/continuar:', error);
+    }
+  });
+
   triggerButton.addEventListener('click', async () => {
     triggerButton.disabled = true;
+    pauseButton.style.display = 'block';
+    pauseButton.textContent = 'Pausar';
+    pauseButton.style.backgroundColor = '#ff9500';
+    pauseButton.style.borderColor = '#ff9500';
+    isPaused = false;
+    isBackupRunning = true;
     resetProgress();
     setStatus('Executando backup...', 'running');
     appendProgress('Solicitando backup...');
@@ -74,6 +104,9 @@ window.addEventListener('DOMContentLoaded', () => {
       setStatus(`Erro ao executar backup: ${error.message}`, 'error');
     } finally {
       triggerButton.disabled = false;
+      pauseButton.style.display = 'none';
+      isBackupRunning = false;
+      isPaused = false;
     }
   });
 });
