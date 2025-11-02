@@ -78,14 +78,19 @@ backup-dev/
 - **Archiver** - Biblioteca para compactação de arquivos
 - **fs-extra** - Operações de sistema de arquivos aprimoradas
 
-## 📱 Instalando o DMG gerado
+## 📥 Download da Aplicação
 
-Após gerar o DMG:
+Você pode baixar a versão mais recente do aplicativo diretamente das [Releases do GitHub](https://github.com/thiagosolstafir69/backup-dev/releases).
 
-1. Abra o arquivo `BackupDeveloper-1.0.0.dmg` na pasta `dist/`
-2. Arraste o app **Backup Developer** para a pasta Applications
-3. Na primeira execução, vá em **Configurações do Sistema** → **Privacidade e Segurança**
-4. Clique em **Abrir mesmo assim** (pois o app não está assinado digitalmente)
+**Link direto:** [Baixar BackupDeveloper-1.0.0.dmg](https://github.com/thiagosolstafir69/backup-dev/releases/download/v1.0.0/BackupDeveloper-1.0.0.dmg)
+
+## 📱 Instalando o DMG
+
+1. Baixe o arquivo `BackupDeveloper-1.0.0.dmg` das Releases
+2. Abra o arquivo DMG
+3. Arraste o app **Backup Developer** para a pasta Applications
+4. Na primeira execução, vá em **Configurações do Sistema** → **Privacidade e Segurança**
+5. Clique em **Abrir mesmo assim** (pois o app não está assinado digitalmente)
 
 ## 🔐 Nota sobre Segurança
 
