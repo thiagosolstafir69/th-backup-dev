@@ -12,6 +12,7 @@ O **Backup Developer** é uma aplicação desktop desenvolvida em Electron que p
 - ✅ Seleção de destino para salvar o backup
 - ✅ Compactação automática em formato ZIP
 - ✅ **Pausar e continuar backup em andamento**
+- ✅ **Cancelar backup a qualquer momento**
 - ✅ Interface gráfica simples e intuitiva
 - ✅ Suporte para Mac (ARM64 e Intel)
 
@@ -83,11 +84,11 @@ backup-dev/
 
 Você pode baixar a versão mais recente do aplicativo diretamente das [Releases do GitHub](https://github.com/thiagosolstafir69/backup-dev/releases).
 
-**Link direto:** [Baixar BackupDeveloper-1.0.3.dmg](https://github.com/thiagosolstafir69/backup-dev/releases/download/v1.0.3/BackupDeveloper-1.0.3.dmg)
+**Link direto:** [Baixar BackupDeveloper-1.0.4.dmg](https://github.com/thiagosolstafir69/backup-dev/releases/download/v1.0.4/BackupDeveloper-1.0.4.dmg)
 
 ## 📱 Instalando o DMG
 
-1. Baixe o arquivo `BackupDeveloper-1.0.3.dmg` das Releases
+1. Baixe o arquivo `BackupDeveloper-1.0.4.dmg` das Releases
 2. Abra o arquivo DMG
 3. Arraste o app **Backup Developer** para a pasta Applications
 4. Na primeira execução, vá em **Configurações do Sistema** → **Privacidade e Segurança**
