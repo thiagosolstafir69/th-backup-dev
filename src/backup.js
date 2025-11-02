@@ -148,11 +148,15 @@ const zipDirectory = (sourceDir, outPath, totalSize, onProgress) =>
     checkInterval = setInterval(() => {
       if (isCancelled) {
         cleanup();
-        archive.abort();
-        output.destroy();
+        try {
+          archive.abort();
+          output.destroy();
+        } catch (err) {
+          // ignore errors during cleanup
+        }
         reject(new Error('Backup cancelado pelo usuário'));
       }
-    }, 200);
+    }, 100);
 
     output.on('close', () => {
       cleanup();
@@ -280,26 +284,47 @@ const createBackup = async (onProgress = () => {}) => {
     }
   };
 
+  const cleanup = async () => {
+    try {
+      if (await fs.pathExists(tmpZipPath)) {
+        await fs.remove(tmpZipPath);
+        update({ type: 'status', text: 'Arquivo temporário removido.' });
+      }
+    } catch (err) {
+      console.error('Erro ao limpar arquivo temporário:', err);
+    }
+  };
+
   update({ type: 'status', text: 'Preparando arquivos para compactação...' });
 
   try {
     update({ type: 'status', text: 'Calculando tamanho total dos arquivos...' });
     const { totalSize, totalFiles } = await collectSourceStats(SOURCE_DIR, update);
+    
+    if (isCancelled) {
+      await cleanup();
+      throw new Error('Backup cancelado pelo usuário');
+    }
+    
     update({
       type: 'status',
       text: `Encontrados ${totalFiles} arquivos (${formatBytes(totalSize)}). Iniciando compactação...`
     });
 
     await zipDirectory(SOURCE_DIR, tmpZipPath, totalSize, update);
+    
+    if (isCancelled) {
+      await cleanup();
+      throw new Error('Backup cancelado pelo usuário');
+    }
+    
     update({ type: 'progress', percent: 100, text: 'Compactação finalizada.' });
     update({ type: 'status', text: 'Arquivo compactado. Movendo para o destino...' });
     await fs.move(tmpZipPath, finalZipPath, { overwrite: true });
     update({ type: 'status', text: `Backup salvo em: ${finalZipPath}` });
     return finalZipPath;
   } catch (error) {
-    if (await fs.pathExists(tmpZipPath)) {
-      await fs.remove(tmpZipPath);
-    }
+    await cleanup();
     throw error;
   }
 };
