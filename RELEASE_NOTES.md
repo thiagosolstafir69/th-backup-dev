@@ -1,40 +1,42 @@
-# Release Notes v1.0.5
+# Release Notes v1.0.6
 
-## 🐛 Correção Crítica: Cancelamento Agora Funciona Corretamente
+## 🚀 Nova Funcionalidade: Ignora node_modules Automaticamente
 
-### 🔧 O que foi corrigido nesta versão
+### 🔧 O que mudou nesta versão
 
-- ✅ **Cancelamento efetivo**: Agora quando você cancela, o arquivo ZIP NÃO é gerado
-- ✅ **Arquivo não é movido**: O backup cancelado não vai para a pasta de destino
-- ✅ **Limpeza automática**: Arquivo temporário é removido automaticamente ao cancelar
-- ✅ **Verificação mais rápida**: Checa cancelamento a cada 100ms (antes era 200ms)
-- ✅ **Mensagem de limpeza**: Exibe "Arquivo temporário removido" quando cancela
+- ✅ **Ignora node_modules**: Pastas `node_modules` não são mais incluídas no backup
+- ✅ **Backup mais rápido**: Sem escanear milhares de arquivos desnecessários
+- ✅ **Arquivo menor**: ZIP final muito menor sem dependências do Node
+- ✅ **Configurável**: Sistema preparado para ignorar outras pastas no futuro
 
-### 🐛 Problema corrigido da v1.0.4
+### 💡 Por que isso é importante?
 
-**Antes (v1.0.4)**: 
-- ❌ Arquivo ZIP continuava sendo gerado mesmo após cancelar
-- ❌ Arquivo era movido para o destino
-- ❌ Backup "cancelado" ficava salvo
+**Antes (v1.0.5)**:
+- ❌ Backup incluía todas as pastas `node_modules`
+- ❌ Milhares de arquivos desnecessários
+- ❌ Backup muito lento
+- ❌ Arquivo ZIP gigante
 
-**Agora (v1.0.5)**:
-- ✅ Processo para imediatamente ao cancelar
-- ✅ Arquivo temporário é removido
-- ✅ Nada é salvo no destino
+**Agora (v1.0.6)**:
+- ✅ Ignora automaticamente `node_modules`
+- ✅ Backup muito mais rápido
+- ✅ Arquivo ZIP até 90% menor
+- ✅ Apenas código-fonte é salvo
 
 ### 📋 Todas as funcionalidades
 
 - Seleção de pasta de origem para backup
 - Seleção de destino para salvar o backup
+- **Ignora automaticamente node_modules** ⭐ NOVO
 - Pausar e continuar backup em andamento
-- **Cancelar backup a qualquer momento** (CORRIGIDO)
+- Cancelar backup a qualquer momento
 - Compactação automática em formato ZIP
 - Interface gráfica simples e intuitiva (700x670 pixels)
 - Suporte para macOS (Apple Silicon e Intel)
 
 ### 📦 Como instalar
 
-1. Baixe o arquivo `BackupDeveloper-1.0.5.dmg`
+1. Baixe o arquivo `BackupDeveloper-1.0.6.dmg`
 2. Abra o arquivo DMG
 3. Arraste o app para a pasta Applications
 4. Na primeira execução, vá em **Configurações do Sistema** → **Privacidade e Segurança** → **Abrir mesmo assim**
@@ -44,7 +46,7 @@
 - **Botão azul "Executar backup"**: Inicia o processo de backup
 - **Botão laranja "Pausar"**: Pausa o backup (muda para verde "Continuar")
 - **Botão verde "Continuar"**: Retoma o backup de onde parou
-- **Botão vermelho "Cancelar"**: Cancela completamente o backup ✅ AGORA FUNCIONA
+- **Botão vermelho "Cancelar"**: Cancela completamente o backup
 
 ### 🖥️ Compatibilidade
 
@@ -66,7 +68,7 @@
 
 ### 📝 Arquivo disponível para download
 
-- `BackupDeveloper-1.0.5.dmg` (107 MB) - Instalador para macOS
+- `BackupDeveloper-1.0.6.dmg` (107 MB) - Instalador para macOS
 
 ---
 
@@ -77,11 +79,21 @@ Se você já tem uma versão anterior instalada, basta:
 2. Arrastar para Applications (substituir quando solicitado)
 3. Pronto!
 
-### 📊 Histórico de correções
+### 📊 Histórico de versões
 
+**v1.0.6** - Nova funcionalidade: Ignora node_modules automaticamente  
 **v1.0.5** - Correção: Cancelamento agora funciona corretamente  
 **v1.0.4** - Adiciona botão de cancelar e corrige pausa  
 **v1.0.3** - Adiciona pausa e continuar  
 **v1.0.2** - Aumenta altura da janela  
 **v1.0.1** - Aumenta tamanho da janela  
 **v1.0.0** - Versão inicial
+
+### 🎯 Benefícios da v1.0.6
+
+| Aspecto | Antes | Agora |
+|---------|-------|-------|
+| Velocidade | Lento | **Muito mais rápido** ⚡ |
+| Tamanho do ZIP | Gigante | **Até 90% menor** 📦 |
+| Arquivos escaneados | Todos | **Apenas necessários** ✅ |
+| node_modules | ✅ Incluído | ❌ **Ignorado** 🎉 |

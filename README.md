@@ -11,6 +11,7 @@ O **Backup Developer** é uma aplicação desktop desenvolvida em Electron que p
 - ✅ Seleção de pasta de origem para backup
 - ✅ Seleção de destino para salvar o backup
 - ✅ Compactação automática em formato ZIP
+- ✅ **Ignora automaticamente pasta node_modules**
 - ✅ **Pausar e continuar backup em andamento**
 - ✅ **Cancelar backup a qualquer momento**
 - ✅ Interface gráfica simples e intuitiva
@@ -84,11 +85,11 @@ backup-dev/
 
 Você pode baixar a versão mais recente do aplicativo diretamente das [Releases do GitHub](https://github.com/thiagosolstafir69/backup-dev/releases).
 
-**Link direto:** [Baixar BackupDeveloper-1.0.5.dmg](https://github.com/thiagosolstafir69/backup-dev/releases/download/v1.0.5/BackupDeveloper-1.0.5.dmg)
+**Link direto:** [Baixar BackupDeveloper-1.0.6.dmg](https://github.com/thiagosolstafir69/backup-dev/releases/download/v1.0.6/BackupDeveloper-1.0.6.dmg)
 
 ## 📱 Instalando o DMG
 
-1. Baixe o arquivo `BackupDeveloper-1.0.5.dmg` das Releases
+1. Baixe o arquivo `BackupDeveloper-1.0.6.dmg` das Releases
 2. Abra o arquivo DMG
 3. Arraste o app **Backup Developer** para a pasta Applications
 4. Na primeira execução, vá em **Configurações do Sistema** → **Privacidade e Segurança**
