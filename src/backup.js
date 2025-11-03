@@ -7,6 +7,7 @@ const fsp = fs.promises;
 const SOURCE_DIR = '/Users/thiago/Developer';
 const DEST_DIR =
   '/Users/thiago/Library/CloudStorage/GoogleDrive-thiagowip@gmail.com/Meu Drive/Backup-developer';
+const IGNORED_DIR_NAMES = new Set(['node_modules']);
 
 // Controle de pausa e cancelamento
 let isPaused = false;
@@ -81,6 +82,9 @@ const collectSourceStats = async (sourceDir, onProgress) => {
         const fullPath = path.join(currentDir, dirent.name);
 
         if (dirent.isDirectory()) {
+          if (IGNORED_DIR_NAMES.has(dirent.name)) {
+            continue;
+          }
           stack.push(fullPath);
           continue;
         }
@@ -216,7 +220,14 @@ const zipDirectory = (sourceDir, outPath, totalSize, onProgress) =>
     });
 
     archive.pipe(output);
-    archive.directory(sourceDir, false);
+    archive.directory(sourceDir, false, (entryData) => {
+      const entryName = entryData?.name || '';
+      const segments = entryName.split(/[\\/]/);
+      if (segments.some((segment) => IGNORED_DIR_NAMES.has(segment))) {
+        return false;
+      }
+      return entryData;
+    });
     archive.finalize();
   });
 
