@@ -1,6 +1,13 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { createBackup, togglePause, cancelBackup } = require('./src/backup');
+const configManager = require('./src/config');
+const {
+  BackupCancelledError,
+  DirectoryNotFoundError,
+  PermissionDeniedError,
+  InvalidConfigError
+} = require('./src/errors/BackupError');
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -32,26 +39,55 @@ app.on('window-all-closed', () => {
   }
 });
 
-ipcMain.handle('start-backup', async (event) => {
+/**
+ * Normaliza mensagem de progresso
+ * @param {string|Object} payload - Payload do progresso
+ * @returns {Object} Mensagem normalizada
+ */
+const normalizeProgressMessage = (payload) => {
+  return typeof payload === 'string'
+    ? { text: payload }
+    : {
+        text: '',
+        type: 'status',
+        ...payload
+      };
+};
+
+/**
+ * Trata erros e retorna mensagem amigável ao usuário
+ * @param {Error} error - Erro ocorrido
+ * @returns {string} Mensagem de erro amigável
+ */
+const getErrorMessage = (error) => {
+  if (error instanceof BackupCancelledError) {
+    return 'Backup cancelado pelo usuário.';
+  }
+  if (error instanceof DirectoryNotFoundError) {
+    return `Diretório não encontrado: ${error.path}`;
+  }
+  if (error instanceof PermissionDeniedError) {
+    return `Permissão negada para acessar: ${error.path}`;
+  }
+  if (error instanceof InvalidConfigError) {
+    return `Configuração inválida: ${error.message}`;
+  }
+  return error.message || 'Ocorreu um erro inesperado durante o backup.';
+};
+
+ipcMain.handle('start-backup', async (event, sourceDir = null, destDir = null) => {
   const sendProgress = (payload) => {
-    const message =
-      typeof payload === 'string'
-        ? { text: payload }
-        : {
-            text: '',
-            type: 'status',
-            ...payload
-          };
+    const message = normalizeProgressMessage(payload);
     event.sender.send('backup-progress', message);
   };
 
   try {
     sendProgress({ type: 'status', text: 'Iniciando backup...' });
-    const backupPath = await createBackup(sendProgress);
+    const backupPath = await createBackup(sendProgress, sourceDir, destDir);
     sendProgress({ type: 'status', text: 'Backup finalizado com sucesso!' });
     return { success: true, path: backupPath };
   } catch (error) {
-    const message = error.message || 'Ocorreu um erro inesperado.';
+    const message = getErrorMessage(error);
     sendProgress({ type: 'status', text: `Falha no backup: ${message}` });
     dialog.showErrorBox('Erro no Backup', message);
     return { success: false, error: message };
@@ -66,4 +102,52 @@ ipcMain.handle('toggle-pause', async () => {
 ipcMain.handle('cancel-backup', async () => {
   cancelBackup();
   return { cancelled: true };
+});
+
+/**
+ * Handler para selecionar diretório de origem
+ */
+ipcMain.handle('select-source-dir', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory'],
+    title: 'Selecione a pasta de origem para backup'
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return { cancelled: true };
+  }
+
+  const selectedPath = result.filePaths[0];
+  await configManager.setSourceDir(selectedPath);
+  return { success: true, path: selectedPath };
+});
+
+/**
+ * Handler para selecionar diretório de destino
+ */
+ipcMain.handle('select-dest-dir', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory'],
+    title: 'Selecione a pasta de destino para salvar o backup'
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return { cancelled: true };
+  }
+
+  const selectedPath = result.filePaths[0];
+  await configManager.setDestDir(selectedPath);
+  return { success: true, path: selectedPath };
+});
+
+/**
+ * Handler para obter configuração atual
+ */
+ipcMain.handle('get-config', async () => {
+  const config = await configManager.load();
+  return {
+    sourceDir: config.sourceDir,
+    destDir: config.destDir,
+    ignoredDirs: config.ignoredDirs
+  };
 });

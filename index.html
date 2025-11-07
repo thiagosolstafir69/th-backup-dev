@@ -5,112 +5,453 @@
     <title>Backup Developer</title>
     <style>
       :root {
-        color-scheme: light dark;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        color: #111827;
+        line-height: 1.5;
+        --page-bg: #eef2ff;
+        --surface: #f8fafc;
+        --card-bg: #ffffff;
+        --card-border: #e5e7eb;
+        --muted: #6b7280;
+        --accent: #2563eb;
+        --accent-dark: #1d4ed8;
+        --warning: #f97316;
+        --danger: #dc2626;
+        --success: #16a34a;
+        --shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
       }
 
       body {
         margin: 0;
+        min-height: 100vh;
+        background: linear-gradient(135deg, var(--page-bg), var(--surface));
+        color: #111827;
+        padding: 32px 24px 48px;
+      }
+
+      .app-shell {
+        max-width: 900px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .hero {
+        background: radial-gradient(circle at top right, #3b82f6, #1e3a8a);
         padding: 24px;
-        background: #f5f5f5;
-      }
-
-      h1 {
-        margin-top: 0;
-        font-size: 1.4rem;
-      }
-
-      button {
-        padding: 10px 18px;
-        font-size: 1rem;
-        border-radius: 6px;
-        border: 1px solid #007aff;
-        background-color: #007aff;
+        border-radius: 20px;
         color: #fff;
-        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        box-shadow: var(--shadow);
+        gap: 16px;
       }
 
-      button:disabled {
+      .hero h1 {
+        margin: 4px 0 8px;
+        font-size: 1.9rem;
+      }
+
+      .hero p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.85);
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.2);
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      .chip-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+        display: inline-block;
+      }
+
+      .card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: var(--shadow);
+      }
+
+      .section-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .hero-eyebrow,
+      .eyebrow {
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.8);
+        margin: 0;
+      }
+
+      .eyebrow {
+        color: var(--muted);
+      }
+
+      h2 {
+        margin: 4px 0;
+        font-size: 1.3rem;
+        color: #0f172a;
+      }
+
+      .badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        background: #e0e7ff;
+        color: #3730a3;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+
+      .config-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .config-item {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .config-title {
+        margin: 0;
+        font-weight: 600;
+        color: #0f172a;
+      }
+
+      .config-description {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .config-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+
+      .config-path {
+        flex: 1;
+        min-width: 260px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: var(--surface);
+        border: 1px dashed var(--card-border);
+        font-size: 0.9rem;
+        color: #0f172a;
+        word-break: break-word;
+      }
+
+      .config-path.empty {
+        color: var(--muted);
+        font-style: italic;
+      }
+
+      .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .button {
+        border: none;
+        border-radius: 10px;
+        padding: 12px 20px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+      }
+
+      .button:disabled {
         opacity: 0.6;
-        cursor: progress;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .button-primary {
+        background: var(--accent);
+        color: #fff;
+        box-shadow: 0 12px 20px rgba(37, 99, 235, 0.25);
+      }
+
+      .button-primary:hover:not(:disabled) {
+        background: var(--accent-dark);
+        transform: translateY(-1px);
+      }
+
+      .button-tonal {
+        background: var(--surface);
+        color: #0f172a;
+        border: 1px solid var(--card-border);
+      }
+
+      .button-warning {
+        background: var(--warning);
+        color: #fff;
+      }
+
+      .button-danger {
+        background: var(--danger);
+        color: #fff;
+      }
+
+      .button-success {
+        background: var(--success);
+        color: #fff;
+      }
+
+      .helper-text {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .status-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
       }
 
       .status {
-        margin-top: 16px;
-        padding: 12px;
-        border-radius: 6px;
-        background: #fff;
-        border: 1px solid #dcdcdc;
+        border-radius: 14px;
+        padding: 18px;
+        border: 1px solid var(--card-border);
+        background: var(--surface);
+        font-weight: 600;
+      }
+
+      .status[data-state='idle'] {
+        border-color: #cbd5f5;
+        background: #eef2ff;
+        color: #1d4ed8;
+      }
+
+      .status[data-state='running'] {
+        border-color: #fde047;
+        background: #fef9c3;
+        color: #92400e;
       }
 
       .status[data-state='success'] {
-        border-color: #34c759;
+        border-color: rgba(22, 163, 74, 0.4);
+        background: #ecfdf5;
+        color: #065f46;
       }
 
       .status[data-state='error'] {
-        border-color: #ff3b30;
+        border-color: rgba(220, 38, 38, 0.4);
+        background: #fef2f2;
+        color: #991b1b;
       }
 
       .progress-wrapper {
-        margin-top: 16px;
+        margin-top: 18px;
         display: flex;
         align-items: center;
         gap: 12px;
       }
 
       .progress-track {
-        position: relative;
         flex: 1;
         height: 12px;
-        border-radius: 6px;
-        background: #dcdcdc;
+        border-radius: 999px;
+        background: #e5e7eb;
         overflow: hidden;
       }
 
       .progress-bar {
-        position: absolute;
-        top: 0;
-        left: 0;
         height: 100%;
         width: 0%;
-        background: #007aff;
-        transition: width 0.2s ease-out;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #38bdf8, #2563eb);
+        transition: width 0.2s ease;
       }
 
       .progress-value {
-        min-width: 40px;
+        min-width: 48px;
         text-align: right;
         font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        color: #0f172a;
       }
 
-      ul {
-        margin-top: 16px;
-        padding-left: 20px;
-        max-height: 300px;
+      .progress-log {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: 320px;
         overflow-y: auto;
-        background: #fff;
-        border: 1px solid #dcdcdc;
-        border-radius: 6px;
-        padding: 12px 12px 12px 32px;
+      }
+
+      .progress-log li {
+        margin: 0;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: var(--surface);
+        border: 1px solid var(--card-border);
+        color: #0f172a;
+        font-size: 0.92rem;
+      }
+
+      @media (max-width: 720px) {
+        body {
+          padding: 24px 18px 32px;
+        }
+
+        .hero,
+        .status-grid {
+          flex-direction: column;
+        }
+
+        .status-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .config-actions {
+          flex-direction: column;
+        }
+
+        .action-buttons {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .card,
+        .hero {
+          padding: 20px;
+        }
       }
     </style>
   </head>
   <body>
-    <h1>Backup Developer</h1>
-    <p>Clique no botão para gerar o backup da pasta /Users/thiago/Developer.</p>
-    <div style="display: flex; gap: 12px;">
-      <button id="backup-button">Executar backup agora</button>
-      <button id="pause-button" style="display: none; background-color: #ff9500; border-color: #ff9500;">Pausar</button>
-      <button id="cancel-button" style="display: none; background-color: #ff3b30; border-color: #ff3b30;">Cancelar</button>
-    </div>
-    <div class="status" id="status" data-state="idle">Aguardando ação.</div>
-    <div class="progress-wrapper">
-      <div class="progress-track">
-        <div class="progress-bar" id="progress-bar"></div>
-      </div>
-      <span class="progress-value" id="progress-value">0%</span>
-    </div>
-    <ul id="progress"></ul>
+    <main class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="hero-eyebrow">Ferramenta interna</p>
+          <h1>Backup Developer</h1>
+          <p>Configure as pastas uma única vez e acompanhe todo o progresso em tempo real.</p>
+        </div>
+        <div class="chip">
+          <span class="chip-dot"></span>
+          Pronto para executar
+        </div>
+      </header>
+
+      <section class="card config-card">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Configurações</p>
+            <h2>Pastas monitoradas</h2>
+          </div>
+          <span class="badge">Obrigatório</span>
+        </div>
+        <div class="config-grid">
+          <div class="config-item">
+            <div>
+              <p class="config-title">Pasta de origem</p>
+              <p class="config-description">Arquivos que serão compactados e enviados para o backup.</p>
+            </div>
+            <div class="config-actions">
+              <div class="config-path empty" id="source-path">Não configurada</div>
+              <button class="button button-tonal" id="select-source-button">Selecionar pasta</button>
+            </div>
+          </div>
+          <div class="config-item">
+            <div>
+              <p class="config-title">Pasta de destino</p>
+              <p class="config-description">Local onde o arquivo final (.zip) será salvo.</p>
+            </div>
+            <div class="config-actions">
+              <div class="config-path empty" id="dest-path">Não configurada</div>
+              <button class="button button-tonal" id="select-dest-button">Selecionar pasta</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card action-card">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Execução</p>
+            <h2>Controle do backup</h2>
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button class="button button-primary" id="backup-button">Executar backup agora</button>
+          <button class="button button-warning" id="pause-button" hidden>Pausar</button>
+          <button class="button button-danger" id="cancel-button" hidden>Cancelar</button>
+        </div>
+        <p class="helper-text">Use “Pausar” para congelar momentaneamente o processo ou “Cancelar” para interromper tudo.</p>
+      </section>
+
+      <section class="status-grid">
+        <div class="card status-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Acompanhamento</p>
+              <h2>Status e progresso</h2>
+            </div>
+          </div>
+          <div class="status" id="status" data-state="idle">Aguardando ação.</div>
+          <div class="progress-wrapper">
+            <div class="progress-track">
+              <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <span class="progress-value" id="progress-value">0%</span>
+          </div>
+        </div>
+        <div class="card log-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Histórico</p>
+              <h2>Eventos recentes</h2>
+            </div>
+          </div>
+          <ul class="progress-log" id="progress"></ul>
+        </div>
+      </section>
+    </main>
     <script src="./renderer.js"></script>
   </body>
 </html>
