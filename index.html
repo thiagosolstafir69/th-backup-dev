@@ -334,6 +334,57 @@
         font-size: 0.92rem;
       }
 
+      .update-card {
+        background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+        border-color: #7dd3fc;
+      }
+
+      .update-content {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .update-status {
+        padding: 12px 16px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(125, 211, 252, 0.3);
+        color: #0c4a6e;
+        font-weight: 500;
+        font-size: 0.95rem;
+      }
+
+      .update-status.update-available {
+        background: #fef3c7;
+        border-color: #fbbf24;
+        color: #92400e;
+      }
+
+      .update-status.update-downloaded {
+        background: #d1fae5;
+        border-color: #34d399;
+        color: #065f46;
+      }
+
+      .update-status.update-error {
+        background: #fee2e2;
+        border-color: #f87171;
+        color: #991b1b;
+      }
+
+      .update-progress-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .update-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
       @media (max-width: 720px) {
         body {
           padding: 24px 18px 32px;
@@ -371,12 +422,35 @@
           <p class="hero-eyebrow">Ferramenta interna</p>
           <h1>Backup Developer</h1>
           <p>Configure as pastas uma única vez e acompanhe todo o progresso em tempo real.</p>
+          <p style="font-size: 0.85rem; margin-top: 8px; opacity: 0.9;">Versão 1.1.1 - Sistema de atualização automática</p>
         </div>
         <div class="chip">
           <span class="chip-dot"></span>
-          Pronto para executar
+          <span id="status-chip-text">Pronto para executar</span>
         </div>
       </header>
+
+      <section class="card update-card" id="update-card" style="display: none;">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Atualizações</p>
+            <h2>Status da aplicação</h2>
+          </div>
+        </div>
+        <div class="update-content">
+          <div class="update-status" id="update-status">Verificando atualizações...</div>
+          <div class="update-progress-wrapper" id="update-progress-wrapper" style="display: none;">
+            <div class="progress-track">
+              <div class="progress-bar" id="update-progress-bar"></div>
+            </div>
+            <span class="progress-value" id="update-progress-value">0%</span>
+          </div>
+          <div class="update-actions">
+            <button class="button button-tonal" id="check-updates-button">Verificar atualizações</button>
+            <button class="button button-success" id="install-update-button" style="display: none;">Baixar atualização</button>
+          </div>
+        </div>
+      </section>
 
       <section class="card config-card">
         <div class="section-heading">

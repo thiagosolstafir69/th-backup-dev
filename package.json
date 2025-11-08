@@ -1,6 +1,6 @@
 {
   "name": "backup-dev",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "",
   "main": "main.js",
   "scripts": {
@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "archiver": "^7.0.1",
+    "electron-updater": "^6.6.2",
     "fs-extra": "^11.3.2"
   },
   "build": {
@@ -69,6 +70,17 @@
     "dmg": {
       "artifactName": "BackupDeveloper-${version}.dmg",
       "backgroundColor": "#f5f5f5"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "thiagosolstafir69",
+        "repo": "th-backup-dev"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thiagosolstafir69/th-backup-dev.git"
   }
 }

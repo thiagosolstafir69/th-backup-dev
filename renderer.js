@@ -10,6 +10,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   const progressList = document.getElementById('progress');
   const progressBar = document.getElementById('progress-bar');
   const progressValue = document.getElementById('progress-value');
+  
+  // Elementos de atualização
+  const updateCard = document.getElementById('update-card');
+  const updateStatus = document.getElementById('update-status');
+  const updateProgressWrapper = document.getElementById('update-progress-wrapper');
+  const updateProgressBar = document.getElementById('update-progress-bar');
+  const updateProgressValue = document.getElementById('update-progress-value');
+  const checkUpdatesButton = document.getElementById('check-updates-button');
+  const installUpdateButton = document.getElementById('install-update-button');
+  const statusChipText = document.getElementById('status-chip-text');
 
   if (
     !triggerButton ||
@@ -123,6 +133,98 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Carrega configuração ao iniciar
   await loadConfig();
   hideControlButtons();
+
+  /**
+   * Gerencia mensagens de atualização
+   */
+  const setupUpdateHandlers = () => {
+    if (!window.backup.onUpdateMessage) {
+      return;
+    }
+
+    window.backup.onUpdateMessage((message) => {
+      updateCard.style.display = 'block';
+
+      switch (message.event) {
+        case 'checking-for-update':
+          updateStatus.textContent = 'Verificando atualizações...';
+          updateStatus.className = 'update-status';
+          updateProgressWrapper.style.display = 'none';
+          installUpdateButton.style.display = 'none';
+          break;
+
+        case 'update-available':
+          updateStatus.textContent = `Nova versão disponível: ${message.version}`;
+          updateStatus.className = 'update-status update-available';
+          updateProgressWrapper.style.display = 'none';
+          installUpdateButton.style.display = 'block';
+          installUpdateButton.dataset.downloadUrl = message.downloadUrl || '';
+          statusChipText.textContent = 'Atualização disponível';
+          break;
+
+        case 'update-not-available':
+          updateStatus.textContent = `Você está usando a versão mais recente (${message.version || 'atual'})`;
+          updateStatus.className = 'update-status';
+          updateProgressWrapper.style.display = 'none';
+          installUpdateButton.style.display = 'none';
+          statusChipText.textContent = 'Pronto para executar';
+          break;
+
+        case 'update-downloaded':
+          updateStatus.textContent = `Atualização disponível! Versão ${message.version} pronta para baixar.`;
+          updateStatus.className = 'update-status update-downloaded';
+          updateProgressWrapper.style.display = 'none';
+          installUpdateButton.style.display = 'block';
+          installUpdateButton.dataset.downloadUrl = message.downloadUrl || '';
+          statusChipText.textContent = 'Atualização pronta';
+          break;
+
+        case 'update-error':
+          updateStatus.textContent = `Erro ao verificar atualizações: ${message.message}`;
+          updateStatus.className = 'update-status update-error';
+          updateProgressWrapper.style.display = 'none';
+          installUpdateButton.style.display = 'none';
+          break;
+      }
+    });
+  };
+
+  /**
+   * Handler para verificar atualizações manualmente
+   */
+  checkUpdatesButton?.addEventListener('click', async () => {
+    try {
+      checkUpdatesButton.disabled = true;
+      checkUpdatesButton.textContent = 'Verificando...';
+      await window.backup.checkForUpdates();
+    } catch (error) {
+      updateStatus.textContent = `Erro ao verificar atualizações: ${error.message}`;
+      updateStatus.className = 'update-status update-error';
+    } finally {
+      checkUpdatesButton.disabled = false;
+      checkUpdatesButton.textContent = 'Verificar atualizações';
+    }
+  });
+
+  /**
+   * Handler para instalar atualização
+   */
+  installUpdateButton?.addEventListener('click', async () => {
+    try {
+      installUpdateButton.disabled = true;
+      installUpdateButton.textContent = 'Abrindo download...';
+      const downloadUrl = installUpdateButton.dataset.downloadUrl;
+      await window.backup.installUpdate(downloadUrl);
+      installUpdateButton.textContent = 'Download aberto';
+    } catch (error) {
+      updateStatus.textContent = `Erro ao abrir download: ${error.message}`;
+      updateStatus.className = 'update-status update-error';
+      installUpdateButton.disabled = false;
+      installUpdateButton.textContent = 'Baixar atualização';
+    }
+  });
+
+  setupUpdateHandlers();
 
   const appendProgress = (message) => {
     const item = document.createElement('li');
