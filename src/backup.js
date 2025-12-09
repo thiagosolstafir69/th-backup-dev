@@ -42,10 +42,13 @@ const backupState = new BackupState();
  * Normaliza caminhos para o formato usado dentro do ZIP
  * @param {string} baseDir - Diretório raiz
  * @param {string} target - Caminho completo do arquivo
+ * @param {string} prefix - Prefixo opcional para o caminho no ZIP
  * @returns {string} Caminho relativo com separadores POSIX
  */
-const toArchiveEntryName = (baseDir, target) =>
-  path.relative(baseDir, target).split(path.sep).join('/');
+const toArchiveEntryName = (baseDir, target, prefix = '') => {
+  const rel = path.relative(baseDir, target).split(path.sep).join('/');
+  return prefix ? `${prefix}/${rel}` : rel;
+};
 
 /**
  * Verifica se o backup está pausado e aguarda retomada
@@ -64,9 +67,7 @@ const checkPause = async (onProgress) => {
       });
       backupState.clearPauseResolve();
     }
-    await new Promise((resolve) =>
-      setTimeout(resolve, PAUSE_CHECK_INTERVAL_MS)
-    );
+    await new Promise((resolve) => setTimeout(resolve, PAUSE_CHECK_INTERVAL_MS));
   }
 
   if (backupState.getCancelled()) {
@@ -170,13 +171,16 @@ const collectSourceStats = async (sourceDir, ignoredDirs, onProgress) => {
  * @param {Function} onProgress - Callback para atualizar progresso
  * @returns {Promise<void>}
  */
-const zipDirectory = (
-  sourceDir,
-  outPath,
-  totalSize,
-  ignoredDirs,
-  onProgress
-) =>
+/**
+ * Cria arquivo ZIP dos diretórios
+ * @param {Array<{path: string, prefix: string}>} sourceDirs - Lista de diretórios de origem
+ * @param {string} outPath - Caminho de saída do ZIP
+ * @param {number} totalSize - Tamanho total esperado em bytes
+ * @param {Set<string>} ignoredDirs - Conjunto de diretórios a ignorar
+ * @param {Function} onProgress - Callback para atualizar progresso
+ * @returns {Promise<void>}
+ */
+const zipDirectories = (sourceDirs, outPath, totalSize, ignoredDirs, onProgress) =>
   new Promise((resolve, reject) => {
     const output = fs.createWriteStream(outPath);
     const archive = archiver('zip', { zlib: { level: COMPRESSION_LEVEL } });
@@ -272,12 +276,13 @@ const zipDirectory = (
     });
 
     archive.on('error', (err) => {
-     cleanup();
+      cleanup();
       reject(err);
     });
 
     archive.pipe(output);
-    const appendDirectoryContents = async () => {
+
+    const appendDirectoryContents = async (sourceDir, prefix) => {
       const stack = [sourceDir];
 
       while (stack.length > 0) {
@@ -308,7 +313,7 @@ const zipDirectory = (
           if (dirent.isSymbolicLink()) {
             try {
               const linkTarget = await fsp.readlink(fullPath);
-              archive.symlink(toArchiveEntryName(sourceDir, fullPath), linkTarget);
+              archive.symlink(toArchiveEntryName(sourceDir, fullPath, prefix), linkTarget);
             } catch (err) {
               if (err.code === 'EACCES') {
                 throw new PermissionDeniedError(fullPath);
@@ -339,7 +344,7 @@ const zipDirectory = (
               reject(err);
             });
             archive.append(stream, {
-              name: toArchiveEntryName(sourceDir, fullPath),
+              name: toArchiveEntryName(sourceDir, fullPath, prefix),
               stats
             });
           } catch (err) {
@@ -352,12 +357,18 @@ const zipDirectory = (
       }
     };
 
-    appendDirectoryContents()
-      .then(() => archive.finalize())
-      .catch((err) => {
+    // Executa sequência de compactação para cada diretório
+    (async () => {
+      try {
+        for (const { path: dirPath, prefix } of sourceDirs) {
+          await appendDirectoryContents(dirPath, prefix);
+        }
+        await archive.finalize();
+      } catch (err) {
         cleanup();
         reject(err);
-      });
+      }
+    })();
   });
 
 /**
@@ -402,19 +413,27 @@ const createProgressMessage = (payload) => {
  * @returns {Promise<string>} Caminho do arquivo de backup criado
  * @throws {BackupError} Em caso de erro durante o backup
  */
+/**
+ * Cria backup do diretório configurado
+ * @param {Function} onProgress - Callback para atualizar progresso
+ * @param {string} [sourceDir] - Diretório de origem (opcional, usa config se não fornecido)
+ * @param {string} [destDir] - Diretório de destino (opcional, usa config se não fornecido)
+ * @param {boolean} [includeXampp] - Se deve incluir backups do XAMPP
+ * @returns {Promise<string>} Caminho do arquivo de backup criado
+ * @throws {BackupError} Em caso de erro durante o backup
+ */
 const createBackup = async (
   onProgress = () => {},
   sourceDir = null,
-  destDir = null
+  destDir = null,
+  includeXampp = false
 ) => {
   backupState.reset();
 
   // Carrega configuração ou usa valores fornecidos
   const config = await configManager.load();
-  const finalSourceDir =
-    sourceDir || config.sourceDir || configManager.getDefaultSourceDir();
-  const finalDestDir =
-    destDir || config.destDir || configManager.getDefaultDestDir();
+  const finalSourceDir = sourceDir || config.sourceDir || configManager.getDefaultSourceDir();
+  const finalDestDir = destDir || config.destDir || configManager.getDefaultDestDir();
   const ignoredDirs = await configManager.getIgnoredDirs();
 
   if (!finalSourceDir || !finalDestDir) {
@@ -424,6 +443,19 @@ const createBackup = async (
   }
 
   await ensurePaths(finalSourceDir, finalDestDir);
+
+  const entriesToBackup = [{ path: finalSourceDir, prefix: '' }];
+  if (includeXampp) {
+    const xamppPath = '/Applications/XAMPP/xamppfiles/htdocs';
+    if (await fs.pathExists(xamppPath)) {
+      entriesToBackup.push({ path: xamppPath, prefix: 'xampp_htdocs' });
+    } else {
+      onProgress({
+        type: 'status',
+        text: 'Aviso: Pasta XAMPP selecionada mas não encontrada. Pulando...'
+      });
+    }
+  }
 
   const timestamp = generateTimestamp();
   const sanitizedTimestamp = sanitizeFilename(timestamp);
@@ -460,11 +492,19 @@ const createBackup = async (
 
   try {
     update({ type: 'status', text: 'Calculando tamanho total dos arquivos...' });
-    const { totalSize, totalFiles } = await collectSourceStats(
-      finalSourceDir,
-      ignoredDirs,
-      update
-    );
+
+    let grandTotalSize = 0;
+    let grandTotalFiles = 0;
+
+    for (const entry of entriesToBackup) {
+      update({
+        type: 'status',
+        text: `Analisando: ${entry.path}...`
+      });
+      const { totalSize, totalFiles } = await collectSourceStats(entry.path, ignoredDirs, update);
+      grandTotalSize += totalSize;
+      grandTotalFiles += totalFiles;
+    }
 
     if (backupState.getCancelled()) {
       await cleanup();
@@ -473,12 +513,12 @@ const createBackup = async (
 
     update({
       type: 'status',
-      text: `Encontrados ${totalFiles} arquivos (${formatBytes(
-        totalSize
+      text: `Total: ${grandTotalFiles} arquivos (${formatBytes(
+        grandTotalSize
       )}). Iniciando compactação...`
     });
 
-    await zipDirectory(finalSourceDir, tmpZipPath, totalSize, ignoredDirs, update);
+    await zipDirectories(entriesToBackup, tmpZipPath, grandTotalSize, ignoredDirs, update);
 
     if (backupState.getCancelled()) {
       await cleanup();

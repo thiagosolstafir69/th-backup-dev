@@ -10,7 +10,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   const progressList = document.getElementById('progress');
   const progressBar = document.getElementById('progress-bar');
   const progressValue = document.getElementById('progress-value');
-  
+  const includeXamppCheckbox = document.getElementById('include-xampp-checkbox');
+
   // Elementos de atualização
   const updateCard = document.getElementById('update-card');
   const updateStatus = document.getElementById('update-status');
@@ -117,7 +118,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const destDir =
         config.destDir ||
         '/Users/thiago/Library/CloudStorage/GoogleDrive-thiagowip@gmail.com/Meu Drive/Backup-developer';
-      
+
       updateSourcePath(sourceDir);
       updateDestPath(destDir);
     } catch (error) {
@@ -233,8 +234,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   const setProgress = (percent) => {
-    const value =
-      typeof percent === 'number' ? Math.max(0, Math.min(percent, 100)) : 0;
+    const value = typeof percent === 'number' ? Math.max(0, Math.min(percent, 100)) : 0;
     progressBar.style.width = `${value}%`;
     progressValue.textContent = `${value}%`;
   };
@@ -339,7 +339,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     appendProgress('Solicitando backup...');
 
     try {
-      const result = await window.backup.start(sourceDir, destDir);
+      const includeXampp = includeXamppCheckbox ? includeXamppCheckbox.checked : false;
+      const result = await window.backup.start(sourceDir, destDir, includeXampp);
       if (result.success) {
         setStatus('Backup concluído com sucesso!', 'success');
         appendProgress(`Arquivo criado em: ${result.path}`);

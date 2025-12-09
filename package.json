@@ -6,6 +6,7 @@
   "scripts": {
     "start": "electron .",
     "build:mac": "electron-builder --mac dmg",
+    "gerar-dmg-local": "bash scripts/gerar-dmg-local.sh",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
     "format": "prettier --write \"**/*.{js,json,md,html}\"",

@@ -46,7 +46,7 @@ function setupAutoUpdater() {
     try {
       await updater.checkForUpdates((event, data) => {
         sendUpdateMessage(event, data);
-        
+
         if (event === 'update-available' && data.downloadUrl) {
           // Quando há atualização disponível, mostra diálogo
           dialog
@@ -79,9 +79,12 @@ function setupAutoUpdater() {
   }, 3000);
 
   // Verifica atualizações a cada 4 horas
-  setInterval(() => {
-    checkUpdates();
-  }, 4 * 60 * 60 * 1000); // 4 horas
+  setInterval(
+    () => {
+      checkUpdates();
+    },
+    4 * 60 * 60 * 1000
+  ); // 4 horas
 }
 
 app.whenReady().then(() => {
@@ -137,24 +140,27 @@ const getErrorMessage = (error) => {
   return error.message || 'Ocorreu um erro inesperado durante o backup.';
 };
 
-ipcMain.handle('start-backup', async (event, sourceDir = null, destDir = null) => {
-  const sendProgress = (payload) => {
-    const message = normalizeProgressMessage(payload);
-    event.sender.send('backup-progress', message);
-  };
+ipcMain.handle(
+  'start-backup',
+  async (event, sourceDir = null, destDir = null, includeXampp = false) => {
+    const sendProgress = (payload) => {
+      const message = normalizeProgressMessage(payload);
+      event.sender.send('backup-progress', message);
+    };
 
-  try {
-    sendProgress({ type: 'status', text: 'Iniciando backup...' });
-    const backupPath = await createBackup(sendProgress, sourceDir, destDir);
-    sendProgress({ type: 'status', text: 'Backup finalizado com sucesso!' });
-    return { success: true, path: backupPath };
-  } catch (error) {
-    const message = getErrorMessage(error);
-    sendProgress({ type: 'status', text: `Falha no backup: ${message}` });
-    dialog.showErrorBox('Erro no Backup', message);
-    return { success: false, error: message };
+    try {
+      sendProgress({ type: 'status', text: 'Iniciando backup...' });
+      const backupPath = await createBackup(sendProgress, sourceDir, destDir, includeXampp);
+      sendProgress({ type: 'status', text: 'Backup finalizado com sucesso!' });
+      return { success: true, path: backupPath };
+    } catch (error) {
+      const message = getErrorMessage(error);
+      sendProgress({ type: 'status', text: `Falha no backup: ${message}` });
+      dialog.showErrorBox('Erro no Backup', message);
+      return { success: false, error: message };
+    }
   }
-});
+);
 
 ipcMain.handle('toggle-pause', async () => {
   const isPaused = togglePause();

@@ -1,8 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('backup', {
-  start: (sourceDir, destDir) =>
-    ipcRenderer.invoke('start-backup', sourceDir, destDir),
+  start: (sourceDir, destDir, includeXampp) =>
+    ipcRenderer.invoke('start-backup', sourceDir, destDir, includeXampp),
   togglePause: () => ipcRenderer.invoke('toggle-pause'),
   cancel: () => ipcRenderer.invoke('cancel-backup'),
   selectSourceDir: () => ipcRenderer.invoke('select-source-dir'),
