@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
@@ -196,7 +196,10 @@
         font-size: 1rem;
         font-weight: 600;
         cursor: pointer;
-        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+        transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease,
+          background 0.2s ease;
       }
 
       .button:disabled {
@@ -422,7 +425,9 @@
           <p class="hero-eyebrow">Ferramenta interna</p>
           <h1>Backup Developer</h1>
           <p>Configure as pastas uma única vez e acompanhe todo o progresso em tempo real.</p>
-          <p style="font-size: 0.85rem; margin-top: 8px; opacity: 0.9;">Versão 1.1.1 - Sistema de atualização automática</p>
+          <p style="font-size: 0.85rem; margin-top: 8px; opacity: 0.9">
+            Versão 1.1.1 - Sistema de atualização automática
+          </p>
         </div>
         <div class="chip">
           <span class="chip-dot"></span>
@@ -430,7 +435,7 @@
         </div>
       </header>
 
-      <section class="card update-card" id="update-card" style="display: none;">
+      <section class="card update-card" id="update-card" style="display: none">
         <div class="section-heading">
           <div>
             <p class="eyebrow">Atualizações</p>
@@ -439,15 +444,19 @@
         </div>
         <div class="update-content">
           <div class="update-status" id="update-status">Verificando atualizações...</div>
-          <div class="update-progress-wrapper" id="update-progress-wrapper" style="display: none;">
+          <div class="update-progress-wrapper" id="update-progress-wrapper" style="display: none">
             <div class="progress-track">
               <div class="progress-bar" id="update-progress-bar"></div>
             </div>
             <span class="progress-value" id="update-progress-value">0%</span>
           </div>
           <div class="update-actions">
-            <button class="button button-tonal" id="check-updates-button">Verificar atualizações</button>
-            <button class="button button-success" id="install-update-button" style="display: none;">Baixar atualização</button>
+            <button class="button button-tonal" id="check-updates-button">
+              Verificar atualizações
+            </button>
+            <button class="button button-success" id="install-update-button" style="display: none">
+              Baixar atualização
+            </button>
           </div>
         </div>
       </section>
@@ -464,11 +473,15 @@
           <div class="config-item">
             <div>
               <p class="config-title">Pasta de origem</p>
-              <p class="config-description">Arquivos que serão compactados e enviados para o backup.</p>
+              <p class="config-description">
+                Arquivos que serão compactados e enviados para o backup.
+              </p>
             </div>
             <div class="config-actions">
               <div class="config-path empty" id="source-path">Não configurada</div>
-              <button class="button button-tonal" id="select-source-button">Selecionar pasta</button>
+              <button class="button button-tonal" id="select-source-button">
+                Selecionar pasta
+              </button>
             </div>
           </div>
           <div class="config-item">
@@ -479,6 +492,36 @@
             <div class="config-actions">
               <div class="config-path empty" id="dest-path">Não configurada</div>
               <button class="button button-tonal" id="select-dest-button">Selecionar pasta</button>
+            </div>
+          </div>
+          <div class="config-item">
+            <div>
+              <p class="config-title">Diretórios extras</p>
+              <p class="config-description">Incluir outros diretórios importantes no backup.</p>
+            </div>
+            <div class="config-actions">
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  cursor: pointer;
+                  padding: 12px;
+                  background: var(--surface);
+                  border-radius: 10px;
+                  border: 1px solid var(--card-border);
+                  width: 100%;
+                "
+              >
+                <input
+                  type="checkbox"
+                  id="include-xampp-checkbox"
+                  style="width: 18px; height: 18px"
+                />
+                <span style="font-size: 0.9rem; color: #0f172a"
+                  >Incluir XAMPP (/Applications/XAMPP/xamppfiles/htdocs)</span
+                >
+              </label>
             </div>
           </div>
         </div>
@@ -496,7 +539,9 @@
           <button class="button button-warning" id="pause-button" hidden>Pausar</button>
           <button class="button button-danger" id="cancel-button" hidden>Cancelar</button>
         </div>
-        <p class="helper-text">Use “Pausar” para congelar momentaneamente o processo ou “Cancelar” para interromper tudo.</p>
+        <p class="helper-text">
+          Use “Pausar” para congelar momentaneamente o processo ou “Cancelar” para interromper tudo.
+        </p>
       </section>
 
       <section class="status-grid">

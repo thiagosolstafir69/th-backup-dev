@@ -12,3 +12,4 @@ build
 *.tar.gz
 .DS_Store
 .backup-developer-config.json
+package.json.backup
