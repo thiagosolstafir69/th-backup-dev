@@ -1,6 +1,6 @@
 {
   "name": "backup-dev",
-  "version": "1.1.9",
+  "version": "1.1.10",
   "description": "",
   "main": "main.js",
   "scripts": {
@@ -62,7 +62,6 @@
       "target": [
         "dmg"
       ],
-      "icon": "build/icon.icns",
       "category": "public.app-category.utilities",
       "hardenedRuntime": false,
       "gatekeeperAssess": false
