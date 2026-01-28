@@ -126,9 +126,6 @@ const collectSourceStats = async (sourceDir, ignoredDirs, onProgress) => {
             const stats = await fsp.stat(fullPath);
             totalSize += stats.size;
           } catch (err) {
-            if (err.code === 'EACCES') {
-              throw new PermissionDeniedError(fullPath);
-            }
             onProgress({
               type: 'status',
               text: `Aviso: não foi possível acessar ${fullPath}: ${err.message}`
@@ -149,7 +146,11 @@ const collectSourceStats = async (sourceDir, ignoredDirs, onProgress) => {
       }
     } catch (err) {
       if (err.code === 'EACCES') {
-        throw new PermissionDeniedError(currentDir);
+        onProgress({
+          type: 'status',
+          text: `Aviso: sem permissão para ler o diretório ${currentDir}. Pulando...`
+        });
+        continue;
       }
       onProgress({
         type: 'status',
@@ -294,7 +295,11 @@ const zipDirectories = (sourceDirs, outPath, totalSize, ignoredDirs, onProgress)
           dirHandle = await fsp.opendir(currentDir);
         } catch (err) {
           if (err.code === 'EACCES') {
-            throw new PermissionDeniedError(currentDir);
+            onProgress({
+              type: 'status',
+              text: `Aviso: sem permissão para ler conteúdo de ${currentDir}. Pulando...`
+            });
+            continue;
           }
           throw err;
         }
@@ -316,7 +321,11 @@ const zipDirectories = (sourceDirs, outPath, totalSize, ignoredDirs, onProgress)
               archive.symlink(toArchiveEntryName(sourceDir, fullPath, prefix), linkTarget);
             } catch (err) {
               if (err.code === 'EACCES') {
-                throw new PermissionDeniedError(fullPath);
+                onProgress({
+                  type: 'status',
+                  text: `Aviso: sem permissão para ler link simbólico ${fullPath}.`
+                });
+                continue;
               }
               throw err;
             }
@@ -332,7 +341,11 @@ const zipDirectories = (sourceDirs, outPath, totalSize, ignoredDirs, onProgress)
             stats = await fsp.stat(fullPath);
           } catch (err) {
             if (err.code === 'EACCES') {
-              throw new PermissionDeniedError(fullPath);
+              onProgress({
+                type: 'status',
+                text: `Aviso: sem permissão para acessar ${fullPath}.`
+              });
+              continue;
             }
             throw err;
           }
@@ -399,10 +412,10 @@ const createProgressMessage = (payload) => {
   return typeof payload === 'string'
     ? { text: payload }
     : {
-        text: '',
-        type: 'status',
-        ...payload
-      };
+      text: '',
+      type: 'status',
+      ...payload
+    };
 };
 
 /**
@@ -423,7 +436,7 @@ const createProgressMessage = (payload) => {
  * @throws {BackupError} Em caso de erro durante o backup
  */
 const createBackup = async (
-  onProgress = () => {},
+  onProgress = () => { },
   sourceDir = null,
   destDir = null,
   includeXampp = false
