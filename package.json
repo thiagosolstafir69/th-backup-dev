@@ -1,14 +1,15 @@
 {
   "name": "backup-dev",
-  "version": "1.1.14",
+  "version": "1.1.15",
   "description": "",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "test": "node --test",
     "build:mac": "electron-builder --mac dmg",
     "gerar-dmg-local": "bash scripts/gerar-dmg-local.sh",
-    "lint": "eslint . --ext .js",
-    "lint:fix": "eslint . --ext .js --fix",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .js",
+    "lint:fix": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .js --fix",
     "format": "prettier --write \"**/*.{js,json,md,html}\"",
     "format:check": "prettier --check \"**/*.{js,json,md,html}\""
   },
@@ -62,7 +63,7 @@
       "target": [
         "dmg"
       ],
-      "icon": "build/icon.icns",
+      "icon": "build/app-icon.icns",
       "category": "public.app-category.utilities",
       "hardenedRuntime": false,
       "gatekeeperAssess": false
@@ -72,7 +73,7 @@
     ],
     "dmg": {
       "artifactName": "BackupDeveloper-${version}.dmg",
-      "icon": "build/icon.icns",
+      "icon": "build/app-icon.icns",
       "backgroundColor": "#f5f5f5"
     },
     "publish": [

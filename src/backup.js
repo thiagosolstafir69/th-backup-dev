@@ -3,12 +3,11 @@ let nativeFs = require('fs');
 if (process.versions && process.versions.electron) {
   try {
     nativeFs = require('original-fs');
-  } catch (err) {
+  } catch {
     nativeFs = require('fs');
   }
 }
 const path = require('path');
-const os = require('os');
 const archiver = require('archiver');
 const BackupState = require('./backupState');
 const configManager = require('./config');
@@ -17,6 +16,8 @@ const {
   FILES_SCAN_PROGRESS_INTERVAL,
   COMPRESSION_LEVEL,
   PROGRESS_UPDATE_INTERVAL_MS,
+  STAT_BATCH_SIZE,
+  ZIP_PAUSE_CHECK_INTERVAL,
   MIN_PROGRESS_PERCENT,
   MAX_PROGRESS_PERCENT,
   TEMP_FILE_PREFIX,
@@ -56,6 +57,8 @@ const toArchiveEntryName = (baseDir, target, prefix = '') => {
  * @throws {BackupCancelledError} Se o backup foi cancelado
  */
 const checkPause = async (onProgress) => {
+  const wasPaused = backupState.getPaused();
+
   while (backupState.getPaused() && !backupState.getCancelled()) {
     if (!backupState.hasPauseResolve()) {
       onProgress({
@@ -74,7 +77,7 @@ const checkPause = async (onProgress) => {
     throw new BackupCancelledError();
   }
 
-  if (!backupState.getPaused()) {
+  if (wasPaused && !backupState.getPaused()) {
     onProgress({
       type: 'status',
       text: '▶️ Backup retomado.'
@@ -83,16 +86,66 @@ const checkPause = async (onProgress) => {
 };
 
 /**
- * Coleta estatísticas dos arquivos no diretório de origem
+ * Coleta entradas e estatísticas dos arquivos no diretório de origem
  * @param {string} sourceDir - Diretório de origem
+ * @param {string} prefix - Prefixo opcional para caminhos no ZIP
  * @param {Set<string>} ignoredDirs - Conjunto de diretórios a ignorar
  * @param {Function} onProgress - Callback para atualizar progresso
- * @returns {Promise<{totalSize: number, totalFiles: number}>}
+ * @returns {Promise<{entries: Array<Object>, totalSize: number, totalFiles: number}>}
  */
-const collectSourceStats = async (sourceDir, ignoredDirs, onProgress) => {
+const collectDirectoryEntries = async (sourceDir, prefix, ignoredDirs, onProgress) => {
+  const entries = [];
   let totalSize = 0;
   let totalFiles = 0;
   const stack = [sourceDir];
+  const pendingFiles = [];
+  const pendingSymlinks = [];
+
+  const flushPendingFiles = async () => {
+    if (pendingFiles.length === 0) {
+      return;
+    }
+    const batch = pendingFiles.splice(0);
+    const results = await Promise.allSettled(
+      batch.map(async ({ fullPath, archivePath }) => {
+        const stats = await fsp.stat(fullPath);
+        return { fullPath, archivePath, stats };
+      })
+    );
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        totalSize += result.value.stats.size;
+        entries.push({
+          type: 'file',
+          fullPath: result.value.fullPath,
+          archivePath: result.value.archivePath,
+          stats: result.value.stats
+        });
+      }
+    }
+  };
+
+  const flushPendingSymlinks = async () => {
+    if (pendingSymlinks.length === 0) {
+      return;
+    }
+    const batch = pendingSymlinks.splice(0);
+    const results = await Promise.allSettled(
+      batch.map(async ({ fullPath, archivePath }) => {
+        const linkTarget = await fsp.readlink(fullPath);
+        return { archivePath, linkTarget };
+      })
+    );
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        entries.push({
+          type: 'symlink',
+          archivePath: result.value.archivePath,
+          linkTarget: result.value.linkTarget
+        });
+      }
+    }
+  };
 
   while (stack.length > 0) {
     await checkPause(onProgress);
@@ -114,6 +167,15 @@ const collectSourceStats = async (sourceDir, ignoredDirs, onProgress) => {
 
         if (dirent.isFile()) {
           totalFiles += 1;
+          pendingFiles.push({
+            fullPath,
+            archivePath: toArchiveEntryName(sourceDir, fullPath, prefix)
+          });
+
+          if (pendingFiles.length >= STAT_BATCH_SIZE) {
+            await flushPendingFiles();
+          }
+
           if (totalFiles % FILES_SCAN_PROGRESS_INTERVAL === 0) {
             await checkPause(onProgress);
             onProgress({
@@ -121,22 +183,22 @@ const collectSourceStats = async (sourceDir, ignoredDirs, onProgress) => {
               text: `Escaneando arquivos... ${totalFiles} encontrados`
             });
           }
-
-          try {
-            const stats = await fsp.stat(fullPath);
-            totalSize += stats.size;
-          } catch (err) {
-            onProgress({
-              type: 'status',
-              text: `Aviso: não foi possível acessar ${fullPath}: ${err.message}`
-            });
-          }
           continue;
         }
 
         if (dirent.isSymbolicLink()) {
           totalFiles += 1;
+          pendingSymlinks.push({
+            fullPath,
+            archivePath: toArchiveEntryName(sourceDir, fullPath, prefix)
+          });
+
+          if (pendingSymlinks.length >= STAT_BATCH_SIZE) {
+            await flushPendingSymlinks();
+          }
+
           if (totalFiles % FILES_SCAN_PROGRESS_INTERVAL === 0) {
+            await checkPause(onProgress);
             onProgress({
               type: 'status',
               text: `Escaneando arquivos... ${totalFiles} encontrados`
@@ -160,28 +222,22 @@ const collectSourceStats = async (sourceDir, ignoredDirs, onProgress) => {
     }
   }
 
-  return { totalSize, totalFiles };
+  // Flush remaining batches
+  await flushPendingFiles();
+  await flushPendingSymlinks();
+
+  return { entries, totalSize, totalFiles };
 };
 
 /**
- * Cria arquivo ZIP do diretório
- * @param {string} sourceDir - Diretório de origem
+ * Cria arquivo ZIP a partir das entradas coletadas
+ * @param {Array<Object>} entries - Lista de entradas a compactar
  * @param {string} outPath - Caminho de saída do ZIP
  * @param {number} totalSize - Tamanho total esperado em bytes
- * @param {Set<string>} ignoredDirs - Conjunto de diretórios a ignorar
  * @param {Function} onProgress - Callback para atualizar progresso
  * @returns {Promise<void>}
  */
-/**
- * Cria arquivo ZIP dos diretórios
- * @param {Array<{path: string, prefix: string}>} sourceDirs - Lista de diretórios de origem
- * @param {string} outPath - Caminho de saída do ZIP
- * @param {number} totalSize - Tamanho total esperado em bytes
- * @param {Set<string>} ignoredDirs - Conjunto de diretórios a ignorar
- * @param {Function} onProgress - Callback para atualizar progresso
- * @returns {Promise<void>}
- */
-const zipDirectories = (sourceDirs, outPath, totalSize, ignoredDirs, onProgress) =>
+const zipEntries = (entries, outPath, totalSize, onProgress) =>
   new Promise((resolve, reject) => {
     const output = fs.createWriteStream(outPath);
     const archive = archiver('zip', { zlib: { level: COMPRESSION_LEVEL } });
@@ -204,7 +260,7 @@ const zipDirectories = (sourceDirs, outPath, totalSize, ignoredDirs, onProgress)
         try {
           archive.abort();
           output.destroy();
-        } catch (err) {
+        } catch {
           // Ignora erros durante cleanup
         }
         reject(new BackupCancelledError());
@@ -283,98 +339,36 @@ const zipDirectories = (sourceDirs, outPath, totalSize, ignoredDirs, onProgress)
 
     archive.pipe(output);
 
-    const appendDirectoryContents = async (sourceDir, prefix) => {
-      const stack = [sourceDir];
-
-      while (stack.length > 0) {
-        await checkPause(onProgress);
-        const currentDir = stack.pop();
-        let dirHandle;
-
-        try {
-          dirHandle = await fsp.opendir(currentDir);
-        } catch (err) {
-          if (err.code === 'EACCES') {
-            onProgress({
-              type: 'status',
-              text: `Aviso: sem permissão para ler conteúdo de ${currentDir}. Pulando...`
-            });
-            continue;
-          }
-          throw err;
-        }
-
-        for await (const dirent of dirHandle) {
-          const fullPath = path.join(currentDir, dirent.name);
-
-          if (dirent.isDirectory()) {
-            if (ignoredDirs.has(dirent.name)) {
-              continue;
-            }
-            stack.push(fullPath);
-            continue;
+    (async () => {
+      try {
+        let fileCount = 0;
+        for (const entry of entries) {
+          fileCount += 1;
+          if (fileCount % ZIP_PAUSE_CHECK_INTERVAL === 0) {
+            await checkPause(onProgress);
           }
 
-          if (dirent.isSymbolicLink()) {
-            try {
-              const linkTarget = await fsp.readlink(fullPath);
-              archive.symlink(toArchiveEntryName(sourceDir, fullPath, prefix), linkTarget);
-            } catch (err) {
-              if (err.code === 'EACCES') {
-                onProgress({
-                  type: 'status',
-                  text: `Aviso: sem permissão para ler link simbólico ${fullPath}.`
-                });
-                continue;
-              }
-              throw err;
-            }
+          if (entry.type === 'symlink') {
+            archive.symlink(entry.archivePath, entry.linkTarget);
             continue;
-          }
-
-          if (!dirent.isFile()) {
-            continue;
-          }
-
-          let stats;
-          try {
-            stats = await fsp.stat(fullPath);
-          } catch (err) {
-            if (err.code === 'EACCES') {
-              onProgress({
-                type: 'status',
-                text: `Aviso: sem permissão para acessar ${fullPath}.`
-              });
-              continue;
-            }
-            throw err;
           }
 
           try {
-            const stream = nativeFs.createReadStream(fullPath);
+            const stream = nativeFs.createReadStream(entry.fullPath);
             stream.once('error', (err) => {
               cleanup();
               reject(err);
             });
             archive.append(stream, {
-              name: toArchiveEntryName(sourceDir, fullPath, prefix),
-              stats
+              name: entry.archivePath,
+              stats: entry.stats
             });
           } catch (err) {
             if (err.code === 'EACCES') {
-              throw new PermissionDeniedError(fullPath);
+              throw new PermissionDeniedError(entry.fullPath);
             }
             throw err;
           }
-        }
-      }
-    };
-
-    // Executa sequência de compactação para cada diretório
-    (async () => {
-      try {
-        for (const { path: dirPath, prefix } of sourceDirs) {
-          await appendDirectoryContents(dirPath, prefix);
         }
         await archive.finalize();
       } catch (err) {
@@ -451,7 +445,8 @@ const createBackup = async (
 
   if (!finalSourceDir || !finalDestDir) {
     throw new Error(
-      'Diretórios de origem e destino devem ser configurados. Use a interface para selecionar as pastas.'
+      'Diretórios de origem e destino devem ser configurados. ' +
+        'Use a interface para selecionar as pastas.'
     );
   }
 
@@ -472,20 +467,20 @@ const createBackup = async (
 
   const timestamp = generateTimestamp();
   const sanitizedTimestamp = sanitizeFilename(timestamp);
-  const tmpZipPath = path.join(
-    os.tmpdir(),
-    `${TEMP_FILE_PREFIX}${sanitizedTimestamp}${TEMP_FILE_SUFFIX}`
-  );
   const finalZipPath = path.join(
     finalDestDir,
     `${FINAL_FILE_PREFIX}${sanitizedTimestamp}${FINAL_FILE_SUFFIX}`
+  );
+  const tmpZipPath = path.join(
+    finalDestDir,
+    `${TEMP_FILE_PREFIX}${sanitizedTimestamp}${TEMP_FILE_SUFFIX}`
   );
 
   const update = (payload) => {
     const message = createProgressMessage(payload);
     try {
       onProgress(message);
-    } catch (err) {
+    } catch {
       // Ignora erros do listener para manter o backup funcionando
     }
   };
@@ -504,8 +499,9 @@ const createBackup = async (
   update({ type: 'status', text: 'Preparando arquivos para compactação...' });
 
   try {
-    update({ type: 'status', text: 'Calculando tamanho total dos arquivos...' });
+    update({ type: 'status', text: 'Mapeando arquivos e calculando o tamanho total...' });
 
+    const collectedEntries = [];
     let grandTotalSize = 0;
     let grandTotalFiles = 0;
 
@@ -514,7 +510,13 @@ const createBackup = async (
         type: 'status',
         text: `Analisando: ${entry.path}...`
       });
-      const { totalSize, totalFiles } = await collectSourceStats(entry.path, ignoredDirs, update);
+      const { entries, totalSize, totalFiles } = await collectDirectoryEntries(
+        entry.path,
+        entry.prefix,
+        ignoredDirs,
+        update
+      );
+      collectedEntries.push(...entries);
       grandTotalSize += totalSize;
       grandTotalFiles += totalFiles;
     }
@@ -531,7 +533,7 @@ const createBackup = async (
       )}). Iniciando compactação...`
     });
 
-    await zipDirectories(entriesToBackup, tmpZipPath, grandTotalSize, ignoredDirs, update);
+    await zipEntries(collectedEntries, tmpZipPath, grandTotalSize, update);
 
     if (backupState.getCancelled()) {
       await cleanup();
@@ -545,7 +547,7 @@ const createBackup = async (
     });
     update({
       type: 'status',
-      text: 'Arquivo compactado. Movendo para o destino...'
+      text: 'Arquivo compactado. Finalizando backup...'
     });
     await fs.move(tmpZipPath, finalZipPath, { overwrite: true });
     update({
