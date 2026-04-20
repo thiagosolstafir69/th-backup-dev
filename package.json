@@ -21,11 +21,12 @@
     "electron": "^39.0.0",
     "electron-builder": "^26.0.12",
     "eslint": "^9.39.1",
-    "prettier": "^3.6.2"
+    "png2icons": "^2.0.1",
+    "prettier": "^3.6.2",
+    "sharp": "^0.34.5"
   },
   "dependencies": {
     "archiver": "^7.0.1",
-    "electron-updater": "^6.6.2",
     "fs-extra": "^11.3.2"
   },
   "build": {

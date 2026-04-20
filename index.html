@@ -2,23 +2,30 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Backup Developer</title>
     <style>
       :root {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        color: #111827;
+        font-family: 'SF Pro Display', -apple-system, 'Avenir Next', 'Segoe UI', sans-serif;
+        color: #1a1a1a;
         line-height: 1.5;
-        --page-bg: #eef2ff;
-        --surface: #f8fafc;
-        --card-bg: #ffffff;
-        --card-border: #e5e7eb;
-        --muted: #6b7280;
-        --accent: #2563eb;
-        --accent-dark: #1d4ed8;
-        --warning: #f97316;
-        --danger: #dc2626;
-        --success: #16a34a;
-        --shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+        --bg: #ffffff;
+        --surface: #ffffff;
+        --surface-muted: #f5f5f5;
+        --border: #e5e5e5;
+        --text: #1a1a1a;
+        --muted: #666666;
+        --accent: #000000;
+        --accent-soft: #f0f0f0;
+        --warning: #f59e0b;
+        --warning-soft: #fef3c7;
+        --danger: #ef4444;
+        --danger-soft: #fee2e2;
+        --success: #10b981;
+        --success-soft: #d1fae5;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+        --shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.1);
       }
 
       * {
@@ -28,547 +35,626 @@
       body {
         margin: 0;
         min-height: 100vh;
-        background: linear-gradient(135deg, var(--page-bg), var(--surface));
-        color: #111827;
-        padding: 32px 24px 48px;
+        padding: 32px;
+        background: var(--bg);
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
 
       .app-shell {
-        max-width: 900px;
+        width: min(900px, 100%);
         margin: 0 auto;
-        display: flex;
-        flex-direction: column;
+        display: grid;
         gap: 24px;
       }
 
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+      }
+
       .hero {
-        background: radial-gradient(circle at top right, #3b82f6, #1e3a8a);
-        padding: 24px;
-        border-radius: 20px;
-        color: #fff;
+        padding: 32px;
         display: flex;
         justify-content: space-between;
+        gap: 20px;
         align-items: flex-start;
-        box-shadow: var(--shadow);
-        gap: 16px;
       }
 
-      .hero h1 {
-        margin: 4px 0 8px;
-        font-size: 1.9rem;
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
       }
 
-      .hero p {
+      .hero-title {
         margin: 0;
-        color: rgba(255, 255, 255, 0.85);
+        font-size: clamp(1.75rem, 3vw, 2.5rem);
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        font-weight: 600;
       }
 
-      .chip {
+      .hero-copy p {
+        margin: 12px 0 0;
+        max-width: 52ch;
+        color: var(--muted);
+        font-size: 1rem;
+        line-height: 1.6;
+      }
+
+      .hero-side {
+        display: grid;
+        gap: 12px;
+        min-width: 220px;
+      }
+
+      .status-chip,
+      .version-chip {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        justify-content: center;
+        width: fit-content;
         padding: 6px 12px;
-        border-radius: 20px;
-        background: rgba(255, 255, 255, 0.2);
-        font-size: 0.85rem;
-        font-weight: 600;
-        letter-spacing: 0.02em;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        letter-spacing: 0;
+        gap: 6px;
       }
 
-      .chip-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #10b981;
-        display: inline-block;
+      .status-chip {
+        background: var(--accent-soft);
+        color: var(--accent);
       }
 
-      .card {
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
-        border-radius: 18px;
-        padding: 24px;
-        box-shadow: var(--shadow);
-      }
-
-      .section-heading {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 20px;
-      }
-
-      .hero-eyebrow,
-      .eyebrow {
-        text-transform: uppercase;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        font-size: 0.75rem;
-        color: rgba(255, 255, 255, 0.8);
-        margin: 0;
-      }
-
-      .eyebrow {
+      .version-chip {
+        background: var(--surface-muted);
         color: var(--muted);
       }
 
-      h2 {
-        margin: 4px 0;
-        font-size: 1.3rem;
-        color: #0f172a;
+      .main-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+        gap: 24px;
       }
 
-      .badge {
-        padding: 4px 10px;
-        border-radius: 12px;
-        background: #e0e7ff;
-        color: #3730a3;
+      .config-panel,
+      .control-panel,
+      .log-panel {
+        padding: 24px;
+      }
+
+      .section-title {
+        margin: 0 0 20px;
+        font-size: 1.1rem;
+        letter-spacing: -0.01em;
         font-weight: 600;
-        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
 
-      .config-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
+      .section-title svg {
+        width: 18px;
+        height: 18px;
+        color: var(--muted);
       }
 
-      .config-item {
-        display: flex;
-        flex-direction: column;
+      .stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .field {
+        display: grid;
         gap: 10px;
       }
 
-      .config-title {
+      .field-label {
         margin: 0;
-        font-weight: 600;
-        color: #0f172a;
-      }
-
-      .config-description {
-        margin: 0;
+        font-size: 0.86rem;
         color: var(--muted);
-        font-size: 0.9rem;
       }
 
-      .config-actions {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        align-items: flex-start;
-      }
-
-      .config-path {
-        flex: 1;
-        min-width: 260px;
-        padding: 12px 14px;
-        border-radius: 10px;
-        background: var(--surface);
-        border: 1px dashed var(--card-border);
+      .path-box {
+        min-height: 56px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface-muted);
         font-size: 0.9rem;
-        color: #0f172a;
         word-break: break-word;
+        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+        display: flex;
+        align-items: center;
+        gap: 10px;
       }
 
-      .config-path.empty {
+      .path-box svg {
+        width: 16px;
+        height: 16px;
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+
+      .path-box.empty {
         color: var(--muted);
         font-style: italic;
       }
 
-      .button-group {
+      .field-row {
         display: flex;
-        flex-direction: column;
-        gap: 18px;
-      }
-
-      .action-buttons {
-        display: flex;
-        flex-wrap: wrap;
+        justify-content: space-between;
         gap: 12px;
         align-items: center;
       }
 
-      .button {
-        border: none;
-        border-radius: 10px;
-        padding: 12px 20px;
-        font-size: 1rem;
-        font-weight: 600;
+      .subtle {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .toggle-row {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface-muted);
         cursor: pointer;
-        transition:
-          transform 0.15s ease,
-          box-shadow 0.15s ease,
-          background 0.2s ease;
+      }
+
+      .toggle-input {
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        margin: 1px 0 0;
+        border-radius: 4px;
+        border: 2px solid var(--border);
+        background: #fff;
+        position: relative;
+        flex: 0 0 auto;
+        cursor: pointer;
+      }
+
+      .toggle-input:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .toggle-input:checked {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .toggle-input:checked::after {
+        content: '';
+        position: absolute;
+        left: 5px;
+        top: 2px;
+        width: 4px;
+        height: 8px;
+        border-right: 2px solid #fff;
+        border-bottom: 2px solid #fff;
+        transform: rotate(40deg);
+      }
+
+      .toggle-copy strong {
+        display: block;
+        margin-bottom: 3px;
+        font-size: 0.96rem;
+      }
+
+      .toggle-copy p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .button {
+        border: 0;
+        border-radius: 6px;
+        padding: 10px 16px;
+        font-family: inherit;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .button:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .button svg {
+        width: 16px;
+        height: 16px;
       }
 
       .button:disabled {
-        opacity: 0.6;
+        opacity: 0.58;
         cursor: not-allowed;
         transform: none;
-        box-shadow: none;
       }
 
       .button-primary {
         background: var(--accent);
         color: #fff;
-        box-shadow: 0 12px 20px rgba(37, 99, 235, 0.25);
       }
 
       .button-primary:hover:not(:disabled) {
-        background: var(--accent-dark);
-        transform: translateY(-1px);
+        background: #333;
       }
 
       .button-tonal {
-        background: var(--surface);
-        color: #0f172a;
-        border: 1px solid var(--card-border);
+        background: var(--surface-muted);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+
+      .button-tonal:hover:not(:disabled) {
+        background: #e5e5e5;
       }
 
       .button-warning {
-        background: var(--warning);
-        color: #fff;
-      }
-
-      .button-danger {
-        background: var(--danger);
-        color: #fff;
+        background: var(--warning-soft);
+        color: #90630f;
       }
 
       .button-success {
-        background: var(--success);
-        color: #fff;
+        background: var(--success-soft);
+        color: var(--success);
       }
 
-      .helper-text {
-        margin: 0;
-        color: var(--muted);
+      .button-danger {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .status-banner {
+        padding: 12px 16px;
+        border-radius: 6px;
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
         font-size: 0.9rem;
-      }
-
-      .status-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 24px;
-      }
-
-      .status {
-        border-radius: 14px;
-        padding: 18px;
-        border: 1px solid var(--card-border);
-        background: var(--surface);
-        font-weight: 600;
-      }
-
-      .status[data-state='idle'] {
-        border-color: #cbd5f5;
-        background: #eef2ff;
-        color: #1d4ed8;
-      }
-
-      .status[data-state='running'] {
-        border-color: #fde047;
-        background: #fef9c3;
-        color: #92400e;
-      }
-
-      .status[data-state='success'] {
-        border-color: rgba(22, 163, 74, 0.4);
-        background: #ecfdf5;
-        color: #065f46;
-      }
-
-      .status[data-state='error'] {
-        border-color: rgba(220, 38, 38, 0.4);
-        background: #fef2f2;
-        color: #991b1b;
-      }
-
-      .progress-wrapper {
-        margin-top: 18px;
+        font-weight: 500;
         display: flex;
         align-items: center;
+        gap: 8px;
+      }
+
+      .status-banner svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+
+      .status-banner[data-state='idle'] {
+        color: var(--accent);
+        background: var(--accent-soft);
+        border-color: var(--border);
+      }
+
+      .status-banner[data-state='running'] {
+        color: var(--warning);
+        background: var(--warning-soft);
+        border-color: var(--border);
+      }
+
+      .status-banner[data-state='success'] {
+        color: var(--success);
+        background: var(--success-soft);
+        border-color: var(--border);
+      }
+
+      .status-banner[data-state='error'] {
+        color: var(--danger);
+        background: var(--danger-soft);
+        border-color: var(--border);
+      }
+
+      .progress-meta {
+        display: flex;
+        justify-content: space-between;
         gap: 12px;
+        margin: 14px 0 8px;
+        color: var(--muted);
+        font-size: 0.88rem;
       }
 
       .progress-track {
-        flex: 1;
+        width: 100%;
         height: 12px;
         border-radius: 999px;
-        background: #e5e7eb;
+        background: var(--surface-muted);
         overflow: hidden;
       }
 
       .progress-bar {
-        height: 100%;
         width: 0%;
+        height: 100%;
         border-radius: inherit;
-        background: linear-gradient(90deg, #38bdf8, #2563eb);
-        transition: width 0.2s ease;
+        background: var(--accent);
+        transition: width 0.3s ease;
       }
 
-      .progress-value {
-        min-width: 48px;
-        text-align: right;
-        font-variant-numeric: tabular-nums;
-        font-weight: 600;
-        color: #0f172a;
+      .helper-text {
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .log-empty {
+        padding: 12px 16px;
+        border-radius: 6px;
+        background: var(--surface-muted);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .log-empty[hidden] {
+        display: none;
       }
 
       .progress-log {
-        margin: 0;
+        margin: 14px 0 0;
         padding: 0;
         list-style: none;
-        display: flex;
-        flex-direction: column;
+        display: grid;
         gap: 10px;
         max-height: 320px;
         overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #d4cfc5 transparent;
+      }
+
+      .progress-log::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .progress-log::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 4px;
+      }
+
+      .progress-log::-webkit-scrollbar-thumb {
+        background: #d4cfc5;
+        border-radius: 4px;
+        transition: background 0.2s ease;
+      }
+
+      .progress-log::-webkit-scrollbar-thumb:hover {
+        background: #c5c0b6;
       }
 
       .progress-log li {
-        margin: 0;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 10px;
+        align-items: start;
         padding: 12px 14px;
-        border-radius: 12px;
-        background: var(--surface);
-        border: 1px solid var(--card-border);
-        color: #0f172a;
+        border-radius: 6px;
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+      }
+
+      .log-stamp {
+        min-width: 72px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 600;
+        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+      }
+
+      .log-copy {
         font-size: 0.92rem;
+        color: var(--text);
+        line-height: 1.5;
       }
 
-      .update-card {
-        background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-        border-color: #7dd3fc;
-      }
-
-      .update-content {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
-
-      .update-status {
-        padding: 12px 16px;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.7);
-        border: 1px solid rgba(125, 211, 252, 0.3);
-        color: #0c4a6e;
-        font-weight: 500;
-        font-size: 0.95rem;
-      }
-
-      .update-status.update-available {
-        background: #fef3c7;
-        border-color: #fbbf24;
-        color: #92400e;
-      }
-
-      .update-status.update-downloaded {
-        background: #d1fae5;
-        border-color: #34d399;
-        color: #065f46;
-      }
-
-      .update-status.update-error {
-        background: #fee2e2;
-        border-color: #f87171;
-        color: #991b1b;
-      }
-
-      .update-progress-wrapper {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .update-actions {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-      }
-
-      @media (max-width: 720px) {
+      @media (max-width: 860px) {
         body {
-          padding: 24px 18px 32px;
+          padding: 18px;
         }
 
         .hero,
-        .status-grid {
-          flex-direction: column;
-        }
-
-        .status-grid {
+        .main-grid {
           grid-template-columns: 1fr;
+          display: grid;
         }
 
-        .config-actions {
-          flex-direction: column;
+        .hero {
+          gap: 18px;
         }
+      }
 
-        .action-buttons {
+      @media (max-width: 620px) {
+        .field-row,
+        .button-row,
+        .progress-meta {
           flex-direction: column;
           align-items: stretch;
         }
 
-        .card,
-        .hero {
+        .hero,
+        .config-panel,
+        .control-panel,
+        .log-panel {
           padding: 20px;
+        }
+
+        .section-title {
+          font-size: 1.2rem;
         }
       }
     </style>
   </head>
-  <body>
+  <body data-app-state="idle">
     <main class="app-shell">
-      <header class="hero">
-        <div>
-          <p class="hero-eyebrow">Ferramenta interna</p>
-          <h1>Backup Developer</h1>
-          <p>Configure as pastas uma única vez e acompanhe todo o progresso em tempo real.</p>
-          <p style="font-size: 0.85rem; margin-top: 8px; opacity: 0.9">
-            Versão 1.1.1 - Sistema de atualização automática
+      <header class="panel hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Backup local</p>
+          <h1 class="hero-title">Backup Developer</h1>
+          <p>
+            Escolha origem e destino, inicie o backup e acompanhe o progresso sem distrações.
           </p>
         </div>
-        <div class="chip">
-          <span class="chip-dot"></span>
-          <span id="status-chip-text">Pronto para executar</span>
+
+        <div class="hero-side">
+          <span class="status-chip" id="status-chip-text">Pronto</span>
+          <span class="version-chip" id="hero-state-label">v1.1.15</span>
         </div>
       </header>
 
-      <section class="card update-card" id="update-card" style="display: none">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Atualizações</p>
-            <h2>Status da aplicação</h2>
-          </div>
-        </div>
-        <div class="update-content">
-          <div class="update-status" id="update-status">Verificando atualizações...</div>
-          <div class="update-progress-wrapper" id="update-progress-wrapper" style="display: none">
-            <div class="progress-track">
-              <div class="progress-bar" id="update-progress-bar"></div>
+      <section class="main-grid">
+        <section class="panel config-panel">
+          <h2 class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            Configuração
+          </h2>
+
+          <div class="stack">
+            <div class="field">
+              <p class="field-label">Origem</p>
+              <div class="path-box empty" id="source-path">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span>Não configurada</span>
+              </div>
+              <div class="field-row">
+                <span class="subtle" id="selection-summary">Selecione as rotas do backup.</span>
+                <button class="button button-tonal" id="select-source-button">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  Escolher origem
+                </button>
+              </div>
             </div>
-            <span class="progress-value" id="update-progress-value">0%</span>
+
+            <div class="field">
+              <p class="field-label">Destino</p>
+              <div class="path-box empty" id="dest-path">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span>Não configurada</span>
+              </div>
+              <div class="field-row">
+                <span class="subtle" id="control-tip">O arquivo final será salvo aqui.</span>
+                <button class="button button-tonal" id="select-dest-button">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  Escolher destino
+                </button>
+              </div>
+            </div>
+
+            <label class="toggle-row" for="include-xampp-checkbox">
+              <input type="checkbox" id="include-xampp-checkbox" class="toggle-input" />
+              <div class="toggle-copy">
+                <strong id="xampp-state">XAMPP desativado</strong>
+                <p>Inclui o conteúdo de `/Applications/XAMPP/xamppfiles/htdocs` no backup.</p>
+              </div>
+            </label>
           </div>
-          <div class="update-actions">
-            <button class="button button-tonal" id="check-updates-button">
-              Verificar atualizações
+        </section>
+
+        <section class="panel control-panel">
+          <h2 class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            Execução
+          </h2>
+
+          <div class="status-banner" id="status" data-state="idle">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>Aguardando ação.</span>
+          </div>
+
+          <div class="progress-meta">
+            <span id="progress-stage">Nenhuma operação ativa</span>
+            <span id="progress-value">0%</span>
+          </div>
+
+          <div class="progress-track">
+            <div class="progress-bar" id="progress-bar"></div>
+          </div>
+
+          <div class="button-row" style="margin-top: 16px">
+            <button class="button button-primary" id="backup-button">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Iniciar backup
             </button>
-            <button class="button button-success" id="install-update-button" style="display: none">
-              Baixar atualização
+            <button class="button button-warning" id="pause-button" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+              </svg>
+              Pausar
+            </button>
+            <button class="button button-danger" id="cancel-button" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+              Cancelar
             </button>
           </div>
-        </div>
+
+          <p class="helper-text" id="hero-summary-text">
+            O status e os próximos passos do processo aparecem neste painel.
+          </p>
+        </section>
       </section>
 
-      <section class="card config-card">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Configurações</p>
-            <h2>Pastas monitoradas</h2>
-          </div>
-          <span class="badge">Obrigatório</span>
+      <section class="panel log-panel">
+        <h2 class="section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          Eventos
+        </h2>
+        <div class="log-empty" id="log-empty-state">
+          O histórico do backup vai aparecer aqui assim que a operação começar.
         </div>
-        <div class="config-grid">
-          <div class="config-item">
-            <div>
-              <p class="config-title">Pasta de origem</p>
-              <p class="config-description">
-                Arquivos que serão compactados e enviados para o backup.
-              </p>
-            </div>
-            <div class="config-actions">
-              <div class="config-path empty" id="source-path">Não configurada</div>
-              <button class="button button-tonal" id="select-source-button">
-                Selecionar pasta
-              </button>
-            </div>
-          </div>
-          <div class="config-item">
-            <div>
-              <p class="config-title">Pasta de destino</p>
-              <p class="config-description">Local onde o arquivo final (.zip) será salvo.</p>
-            </div>
-            <div class="config-actions">
-              <div class="config-path empty" id="dest-path">Não configurada</div>
-              <button class="button button-tonal" id="select-dest-button">Selecionar pasta</button>
-            </div>
-          </div>
-          <div class="config-item">
-            <div>
-              <p class="config-title">Diretórios extras</p>
-              <p class="config-description">Incluir outros diretórios importantes no backup.</p>
-            </div>
-            <div class="config-actions">
-              <label
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                  cursor: pointer;
-                  padding: 12px;
-                  background: var(--surface);
-                  border-radius: 10px;
-                  border: 1px solid var(--card-border);
-                  width: 100%;
-                "
-              >
-                <input
-                  type="checkbox"
-                  id="include-xampp-checkbox"
-                  style="width: 18px; height: 18px"
-                />
-                <span style="font-size: 0.9rem; color: #0f172a"
-                  >Incluir XAMPP (/Applications/XAMPP/xamppfiles/htdocs)</span
-                >
-              </label>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card action-card">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Execução</p>
-            <h2>Controle do backup</h2>
-          </div>
-        </div>
-        <div class="action-buttons">
-          <button class="button button-primary" id="backup-button">Executar backup agora</button>
-          <button class="button button-warning" id="pause-button" hidden>Pausar</button>
-          <button class="button button-danger" id="cancel-button" hidden>Cancelar</button>
-        </div>
-        <p class="helper-text">
-          Use “Pausar” para congelar momentaneamente o processo ou “Cancelar” para interromper tudo.
-        </p>
-      </section>
-
-      <section class="status-grid">
-        <div class="card status-card">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Acompanhamento</p>
-              <h2>Status e progresso</h2>
-            </div>
-          </div>
-          <div class="status" id="status" data-state="idle">Aguardando ação.</div>
-          <div class="progress-wrapper">
-            <div class="progress-track">
-              <div class="progress-bar" id="progress-bar"></div>
-            </div>
-            <span class="progress-value" id="progress-value">0%</span>
-          </div>
-        </div>
-        <div class="card log-card">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Histórico</p>
-              <h2>Eventos recentes</h2>
-            </div>
-          </div>
-          <ul class="progress-log" id="progress"></ul>
-        </div>
+        <ul class="progress-log" id="progress"></ul>
       </section>
     </main>
     <script src="./renderer.js"></script>

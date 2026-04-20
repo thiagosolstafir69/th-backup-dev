@@ -8,29 +8,12 @@ contextBridge.exposeInMainWorld('backup', {
   selectSourceDir: () => ipcRenderer.invoke('select-source-dir'),
   selectDestDir: () => ipcRenderer.invoke('select-dest-dir'),
   getConfig: () => ipcRenderer.invoke('get-config'),
-  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
-  installUpdate: (downloadUrl) => ipcRenderer.invoke('install-update', downloadUrl),
   onProgress: (callback) => {
     if (typeof callback !== 'function') {
       return () => {};
     }
 
     const channel = 'backup-progress';
-    const handler = (_event, message) => {
-      callback(message);
-    };
-
-    ipcRenderer.on(channel, handler);
-    return () => {
-      ipcRenderer.removeListener(channel, handler);
-    };
-  },
-  onUpdateMessage: (callback) => {
-    if (typeof callback !== 'function') {
-      return () => {};
-    }
-
-    const channel = 'update-message';
     const handler = (_event, message) => {
       callback(message);
     };

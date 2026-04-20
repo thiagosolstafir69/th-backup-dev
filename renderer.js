@@ -1,4 +1,8 @@
 window.addEventListener('DOMContentLoaded', async () => {
+  const DEFAULT_SOURCE_DIR = '/Users/thiago/Developer';
+  const DEFAULT_DEST_DIR =
+    '/Users/thiago/Library/CloudStorage/GoogleDrive-thiagowip@gmail.com/Meu Drive/Backup-developer';
+
   const triggerButton = document.getElementById('backup-button');
   const pauseButton = document.getElementById('pause-button');
   const cancelButton = document.getElementById('cancel-button');
@@ -11,16 +15,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   const progressBar = document.getElementById('progress-bar');
   const progressValue = document.getElementById('progress-value');
   const includeXamppCheckbox = document.getElementById('include-xampp-checkbox');
-
-  // Elementos de atualização
-  const updateCard = document.getElementById('update-card');
-  const updateStatus = document.getElementById('update-status');
-  const updateProgressWrapper = document.getElementById('update-progress-wrapper');
-  const updateProgressBar = document.getElementById('update-progress-bar');
-  const updateProgressValue = document.getElementById('update-progress-value');
-  const checkUpdatesButton = document.getElementById('check-updates-button');
-  const installUpdateButton = document.getElementById('install-update-button');
   const statusChipText = document.getElementById('status-chip-text');
+  const heroStateLabel = document.getElementById('hero-state-label');
+  const progressStage = document.getElementById('progress-stage');
+  const selectionSummary = document.getElementById('selection-summary');
+  const controlTip = document.getElementById('control-tip');
+  const xamppState = document.getElementById('xampp-state');
+  const heroSummaryText = document.getElementById('hero-summary-text');
+  const logEmptyState = document.getElementById('log-empty-state');
 
   if (
     !triggerButton ||
@@ -34,26 +36,85 @@ window.addEventListener('DOMContentLoaded', async () => {
     !progressList ||
     !progressBar ||
     !progressValue ||
+    !includeXamppCheckbox ||
     !window.backup
   ) {
     return;
   }
 
+  const STATUS_META = {
+    idle: {
+      chip: 'Pronto',
+      title: 'v1.1.15',
+      stage: 'Nenhuma operação ativa',
+      helper: 'O status e os próximos passos do processo aparecem neste painel.'
+    },
+    running: {
+      chip: 'Executando',
+      title: 'Backup em andamento',
+      stage: 'Aguardando eventos do processo',
+      helper: 'Pausa e cancelamento ficam disponíveis enquanto o ZIP é montado.'
+    },
+    success: {
+      chip: 'Concluído',
+      title: 'Backup finalizado',
+      stage: 'Processo encerrado',
+      helper: 'O arquivo foi salvo com sucesso no destino configurado.'
+    },
+    error: {
+      chip: 'Erro',
+      title: 'Intervenção necessária',
+      stage: 'Processo interrompido',
+      helper: 'Revise a mensagem mais recente e tente novamente.'
+    }
+  };
+
   let isBackupRunning = false;
   let isPaused = false;
-  let currentSourceDir = null;
-  let currentDestDir = null;
+  let currentSourceDir = DEFAULT_SOURCE_DIR;
+  let currentDestDir = DEFAULT_DEST_DIR;
 
-  const setPauseButtonVisualState = (pausedState) => {
-    if (pausedState) {
-      pauseButton.textContent = 'Continuar';
-      pauseButton.classList.remove('button-warning');
-      pauseButton.classList.add('button-success');
-    } else {
-      pauseButton.textContent = 'Pausar';
-      pauseButton.classList.remove('button-success');
-      pauseButton.classList.add('button-warning');
+  const shortenPath = (value) => value.replace(/^\/Users\/thiago/, '~');
+
+  const getPathLabel = (value, fallback) => {
+    if (!value) {
+      return fallback;
     }
+
+    const parts = value.replace(/\/+$/, '').split('/').filter(Boolean);
+    return parts[parts.length - 1] || fallback;
+  };
+
+  const syncSelections = () => {
+    const includeXampp = includeXamppCheckbox.checked;
+
+    const sourcePathSpan = sourcePathElement.querySelector('span') || sourcePathElement;
+    const destPathSpan = destPathElement.querySelector('span') || destPathElement;
+
+    sourcePathSpan.textContent = currentSourceDir;
+    sourcePathElement.classList.toggle('empty', !currentSourceDir);
+    destPathSpan.textContent = currentDestDir;
+    destPathElement.classList.toggle('empty', !currentDestDir);
+
+    if (selectionSummary) {
+      selectionSummary.textContent = `${getPathLabel(currentSourceDir, 'Origem')} -> ${getPathLabel(
+        currentDestDir,
+        'Destino'
+      )}`;
+    }
+
+    if (controlTip) {
+      controlTip.textContent = `Destino atual: ${shortenPath(currentDestDir)}`;
+    }
+
+    if (xamppState) {
+      xamppState.textContent = includeXampp ? 'XAMPP ativado' : 'XAMPP desativado';
+    }
+  };
+
+  const updatePrimaryButton = () => {
+    triggerButton.disabled = isBackupRunning;
+    triggerButton.textContent = isBackupRunning ? 'Backup em andamento' : 'Iniciar backup';
   };
 
   const showControlButtons = () => {
@@ -66,177 +127,102 @@ window.addEventListener('DOMContentLoaded', async () => {
     cancelButton.hidden = true;
   };
 
-  /**
-   * Atualiza a exibição do caminho de origem
-   * @param {string|null} path - Caminho a ser exibido
-   */
-  const updateSourcePath = (path) => {
-    currentSourceDir = path;
-    if (path) {
-      sourcePathElement.textContent = path;
-      sourcePathElement.classList.remove('empty');
-    } else {
-      sourcePathElement.textContent = 'Não configurada';
-      sourcePathElement.classList.add('empty');
-    }
-    updateBackupButtonState();
-  };
-
-  /**
-   * Atualiza a exibição do caminho de destino
-   * @param {string|null} path - Caminho a ser exibido
-   */
-  const updateDestPath = (path) => {
-    currentDestDir = path;
-    if (path) {
-      destPathElement.textContent = path;
-      destPathElement.classList.remove('empty');
-    } else {
-      destPathElement.textContent = 'Não configurada';
-      destPathElement.classList.add('empty');
-    }
-    updateBackupButtonState();
-  };
-
-  /**
-   * Atualiza o estado do botão de backup baseado na configuração
-   */
-  const updateBackupButtonState = () => {
-    // Sempre habilitado pois temos valores padrão
-    triggerButton.disabled = false;
-    triggerButton.title = '';
-  };
-
-  /**
-   * Carrega a configuração salva ou usa valores padrão
-   */
-  const loadConfig = async () => {
-    try {
-      const config = await window.backup.getConfig();
-      // Sempre mostra os valores padrão se não houver configuração
-      const sourceDir = config.sourceDir || '/Users/thiago/Developer';
-      const destDir =
-        config.destDir ||
-        '/Users/thiago/Library/CloudStorage/GoogleDrive-thiagowip@gmail.com/Meu Drive/Backup-developer';
-
-      updateSourcePath(sourceDir);
-      updateDestPath(destDir);
-    } catch (error) {
-      console.error('Erro ao carregar configuração:', error);
-      // Em caso de erro, usa valores padrão
-      updateSourcePath('/Users/thiago/Developer');
-      updateDestPath(
-        '/Users/thiago/Library/CloudStorage/GoogleDrive-thiagowip@gmail.com/Meu Drive/Backup-developer'
-      );
-    }
-  };
-
-  // Carrega configuração ao iniciar
-  await loadConfig();
-  hideControlButtons();
-
-  /**
-   * Gerencia mensagens de atualização
-   */
-  const setupUpdateHandlers = () => {
-    if (!window.backup.onUpdateMessage) {
-      return;
-    }
-
-    window.backup.onUpdateMessage((message) => {
-      updateCard.style.display = 'block';
-
-      switch (message.event) {
-        case 'checking-for-update':
-          updateStatus.textContent = 'Verificando atualizações...';
-          updateStatus.className = 'update-status';
-          updateProgressWrapper.style.display = 'none';
-          installUpdateButton.style.display = 'none';
-          break;
-
-        case 'update-available':
-          updateStatus.textContent = `Nova versão disponível: ${message.version}`;
-          updateStatus.className = 'update-status update-available';
-          updateProgressWrapper.style.display = 'none';
-          installUpdateButton.style.display = 'block';
-          installUpdateButton.dataset.downloadUrl = message.downloadUrl || '';
-          statusChipText.textContent = 'Atualização disponível';
-          break;
-
-        case 'update-not-available':
-          updateStatus.textContent = `Você está usando a versão mais recente (${message.version || 'atual'})`;
-          updateStatus.className = 'update-status';
-          updateProgressWrapper.style.display = 'none';
-          installUpdateButton.style.display = 'none';
-          statusChipText.textContent = 'Pronto para executar';
-          break;
-
-        case 'update-downloaded':
-          updateStatus.textContent = `Atualização disponível! Versão ${message.version} pronta para baixar.`;
-          updateStatus.className = 'update-status update-downloaded';
-          updateProgressWrapper.style.display = 'none';
-          installUpdateButton.style.display = 'block';
-          installUpdateButton.dataset.downloadUrl = message.downloadUrl || '';
-          statusChipText.textContent = 'Atualização pronta';
-          break;
-
-        case 'update-error':
-          updateStatus.textContent = `Erro ao verificar atualizações: ${message.message}`;
-          updateStatus.className = 'update-status update-error';
-          updateProgressWrapper.style.display = 'none';
-          installUpdateButton.style.display = 'none';
-          break;
+  const setPauseButtonVisualState = (pausedState) => {
+    if (pausedState) {
+      pauseButton.textContent = 'Continuar';
+      pauseButton.classList.remove('button-warning');
+      pauseButton.classList.add('button-success');
+      if (statusChipText) {
+        statusChipText.textContent = 'Pausado';
       }
-    });
-  };
-
-  /**
-   * Handler para verificar atualizações manualmente
-   */
-  checkUpdatesButton?.addEventListener('click', async () => {
-    try {
-      checkUpdatesButton.disabled = true;
-      checkUpdatesButton.textContent = 'Verificando...';
-      await window.backup.checkForUpdates();
-    } catch (error) {
-      updateStatus.textContent = `Erro ao verificar atualizações: ${error.message}`;
-      updateStatus.className = 'update-status update-error';
-    } finally {
-      checkUpdatesButton.disabled = false;
-      checkUpdatesButton.textContent = 'Verificar atualizações';
+      if (heroStateLabel) {
+        heroStateLabel.textContent = 'Pausa manual';
+      }
+      if (progressStage) {
+        progressStage.textContent = 'Operação pausada';
+      }
+    } else {
+      pauseButton.textContent = 'Pausar';
+      pauseButton.classList.remove('button-success');
+      pauseButton.classList.add('button-warning');
     }
-  });
-
-  /**
-   * Handler para instalar atualização
-   */
-  installUpdateButton?.addEventListener('click', async () => {
-    try {
-      installUpdateButton.disabled = true;
-      installUpdateButton.textContent = 'Abrindo download...';
-      const downloadUrl = installUpdateButton.dataset.downloadUrl;
-      await window.backup.installUpdate(downloadUrl);
-      installUpdateButton.textContent = 'Download aberto';
-    } catch (error) {
-      updateStatus.textContent = `Erro ao abrir download: ${error.message}`;
-      updateStatus.className = 'update-status update-error';
-      installUpdateButton.disabled = false;
-      installUpdateButton.textContent = 'Baixar atualização';
-    }
-  });
-
-  setupUpdateHandlers();
-
-  const appendProgress = (message) => {
-    const item = document.createElement('li');
-    item.textContent = message;
-    progressList.prepend(item);
   };
 
   const setProgress = (percent) => {
     const value = typeof percent === 'number' ? Math.max(0, Math.min(percent, 100)) : 0;
     progressBar.style.width = `${value}%`;
     progressValue.textContent = `${value}%`;
+  };
+
+  const resetProgress = () => {
+    progressList.innerHTML = '';
+    setProgress(0);
+
+    if (progressStage) {
+      progressStage.textContent = STATUS_META.idle.stage;
+    }
+    if (logEmptyState) {
+      logEmptyState.hidden = false;
+    }
+  };
+
+  const setStatus = (message, type = 'idle') => {
+    const meta = STATUS_META[type] || STATUS_META.idle;
+
+    document.body.dataset.appState = type;
+    const statusSpan = statusText.querySelector('span') || statusText;
+    statusSpan.textContent = message;
+    statusText.dataset.state = type;
+
+    if (statusChipText) {
+      statusChipText.textContent = isPaused && type === 'running' ? 'Pausado' : meta.chip;
+    }
+    if (heroStateLabel) {
+      heroStateLabel.textContent = isPaused && type === 'running' ? 'Pausa manual' : meta.title;
+    }
+    if (progressStage && !isPaused) {
+      progressStage.textContent = meta.stage;
+    }
+    if (heroSummaryText) {
+      heroSummaryText.textContent = meta.helper;
+    }
+  };
+
+  const appendProgress = (message) => {
+    const item = document.createElement('li');
+    const stamp = document.createElement('span');
+    const copy = document.createElement('span');
+
+    stamp.className = 'log-stamp';
+    stamp.textContent = new Date().toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+
+    copy.className = 'log-copy';
+    copy.textContent = message;
+
+    item.append(stamp, copy);
+    progressList.prepend(item);
+
+    if (logEmptyState) {
+      logEmptyState.hidden = true;
+    }
+  };
+
+  const loadConfig = async () => {
+    try {
+      const config = await window.backup.getConfig();
+      currentSourceDir = config.sourceDir || DEFAULT_SOURCE_DIR;
+      currentDestDir = config.destDir || DEFAULT_DEST_DIR;
+    } catch (error) {
+      currentSourceDir = DEFAULT_SOURCE_DIR;
+      currentDestDir = DEFAULT_DEST_DIR;
+      console.error('Erro ao carregar configuração:', error);
+    }
+
+    syncSelections();
   };
 
   window.backup.onProgress((payload) => {
@@ -253,46 +239,44 @@ window.addEventListener('DOMContentLoaded', async () => {
       setProgress(message.percent);
     }
 
+    if (message.text && progressStage) {
+      progressStage.textContent = message.text;
+    }
+
     if (message.text && message.type !== 'progress') {
       appendProgress(message.text);
     }
   });
 
-  const setStatus = (message, type = 'idle') => {
-    statusText.textContent = message;
-    statusText.dataset.state = type;
-  };
+  includeXamppCheckbox.addEventListener('change', () => {
+    syncSelections();
+  });
 
-  const resetProgress = () => {
-    progressList.innerHTML = '';
-    setProgress(0);
-  };
-
-  // Handler para selecionar pasta de origem
   selectSourceButton.addEventListener('click', async () => {
     try {
       const result = await window.backup.selectSourceDir();
       if (result.success) {
-        updateSourcePath(result.path);
-        setStatus('Pasta de origem configurada', 'success');
+        currentSourceDir = result.path;
+        syncSelections();
+        setStatus('Origem configurada com sucesso.', 'success');
       }
     } catch (error) {
       console.error('Erro ao selecionar pasta de origem:', error);
-      setStatus(`Erro ao selecionar pasta: ${error.message}`, 'error');
+      setStatus(`Erro ao selecionar a origem: ${error.message}`, 'error');
     }
   });
 
-  // Handler para selecionar pasta de destino
   selectDestButton.addEventListener('click', async () => {
     try {
       const result = await window.backup.selectDestDir();
       if (result.success) {
-        updateDestPath(result.path);
-        setStatus('Pasta de destino configurada', 'success');
+        currentDestDir = result.path;
+        syncSelections();
+        setStatus('Destino configurado com sucesso.', 'success');
       }
     } catch (error) {
       console.error('Erro ao selecionar pasta de destino:', error);
-      setStatus(`Erro ao selecionar pasta: ${error.message}`, 'error');
+      setStatus(`Erro ao selecionar o destino: ${error.message}`, 'error');
     }
   });
 
@@ -301,6 +285,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       const result = await window.backup.togglePause();
       isPaused = result.isPaused;
       setPauseButtonVisualState(isPaused);
+
+      if (!isPaused) {
+        setStatus('Backup retomado.', 'running');
+      }
     } catch (error) {
       console.error('Erro ao pausar/continuar:', error);
     }
@@ -309,38 +297,35 @@ window.addEventListener('DOMContentLoaded', async () => {
   cancelButton.addEventListener('click', async () => {
     try {
       await window.backup.cancel();
-      setStatus('Backup cancelado pelo usuário', 'error');
-      appendProgress('❌ Backup cancelado');
-      hideControlButtons();
-      setPauseButtonVisualState(false);
-      triggerButton.disabled = false;
       isBackupRunning = false;
       isPaused = false;
-      updateBackupButtonState();
+      hideControlButtons();
+      setPauseButtonVisualState(false);
+      updatePrimaryButton();
+      setStatus('Backup cancelado pelo usuário.', 'error');
+      appendProgress('Backup cancelado');
     } catch (error) {
       console.error('Erro ao cancelar:', error);
     }
   });
 
   triggerButton.addEventListener('click', async () => {
-    // Usa valores padrão se não houver configuração
-    const sourceDir = currentSourceDir || '/Users/thiago/Developer';
-    const destDir =
-      currentDestDir ||
-      '/Users/thiago/Library/CloudStorage/GoogleDrive-thiagowip@gmail.com/Meu Drive/Backup-developer';
-
-    triggerButton.disabled = true;
+    isBackupRunning = true;
+    isPaused = false;
+    updatePrimaryButton();
     showControlButtons();
     setPauseButtonVisualState(false);
-    isPaused = false;
-    isBackupRunning = true;
     resetProgress();
     setStatus('Executando backup...', 'running');
     appendProgress('Solicitando backup...');
 
     try {
-      const includeXampp = includeXamppCheckbox ? includeXamppCheckbox.checked : false;
-      const result = await window.backup.start(sourceDir, destDir, includeXampp);
+      const result = await window.backup.start(
+        currentSourceDir,
+        currentDestDir,
+        includeXamppCheckbox.checked
+      );
+
       if (result.success) {
         setStatus('Backup concluído com sucesso!', 'success');
         appendProgress(`Arquivo criado em: ${result.path}`);
@@ -350,12 +335,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       setStatus(`Erro ao executar backup: ${error.message}`, 'error');
     } finally {
-      triggerButton.disabled = false;
-      hideControlButtons();
-      setPauseButtonVisualState(false);
       isBackupRunning = false;
       isPaused = false;
-      updateBackupButtonState();
+      hideControlButtons();
+      setPauseButtonVisualState(false);
+      updatePrimaryButton();
     }
   });
+
+  await loadConfig();
+  updatePrimaryButton();
+  hideControlButtons();
+  resetProgress();
+  setStatus('Aguardando ação.', 'idle');
 });
