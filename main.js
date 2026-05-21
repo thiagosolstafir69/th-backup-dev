@@ -13,10 +13,12 @@ const {
 let mainWindow = null;
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 700,
-    height: 670,
-    resizable: false,
+	mainWindow = new BrowserWindow({
+	  width: 1100,
+	  height: 800,
+	  minWidth: 960,
+	  minHeight: 720,
+	  resizable: true,
     icon: path.join(__dirname, 'build', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
