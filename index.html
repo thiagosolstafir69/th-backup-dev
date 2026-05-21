@@ -3,473 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <title>Backup Developer</title>
-    <style>
-      :root {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        color: #111827;
-        line-height: 1.5;
-        --page-bg: #eef2ff;
-        --surface: #f8fafc;
-        --card-bg: #ffffff;
-        --card-border: #e5e7eb;
-        --muted: #6b7280;
-        --accent: #2563eb;
-        --accent-dark: #1d4ed8;
-        --warning: #f97316;
-        --danger: #dc2626;
-        --success: #16a34a;
-        --shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        min-height: 100vh;
-        background: linear-gradient(135deg, var(--page-bg), var(--surface));
-        color: #111827;
-        padding: 32px 24px 48px;
-      }
-
-      .app-shell {
-        width: min(1100px, calc(100vw - 48px));
-        max-width: 1100px;
-        margin: 0 auto;
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-      }
-
-      .hero {
-        background: radial-gradient(circle at top right, #3b82f6, #1e3a8a);
-        padding: 24px;
-        border-radius: 20px;
-        color: #fff;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        box-shadow: var(--shadow);
-        gap: 16px;
-      }
-
-      .hero h1 {
-        margin: 4px 0 8px;
-        font-size: 1.9rem;
-      }
-
-      .hero p {
-        margin: 0;
-        color: rgba(255, 255, 255, 0.85);
-      }
-
-      .chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        border-radius: 20px;
-        background: rgba(255, 255, 255, 0.2);
-        font-size: 0.85rem;
-        font-weight: 600;
-        letter-spacing: 0.02em;
-      }
-
-      .chip-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #10b981;
-        display: inline-block;
-      }
-
-      .card {
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
-        border-radius: 18px;
-        padding: 24px;
-        box-shadow: var(--shadow);
-      }
-
-      .section-heading {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 20px;
-      }
-
-      .hero-eyebrow,
-      .eyebrow {
-        text-transform: uppercase;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        font-size: 0.75rem;
-        color: rgba(255, 255, 255, 0.8);
-        margin: 0;
-      }
-
-      .eyebrow {
-        color: var(--muted);
-      }
-
-      h2 {
-        margin: 4px 0;
-        font-size: 1.3rem;
-        color: #0f172a;
-      }
-
-      .badge {
-        padding: 4px 10px;
-        border-radius: 12px;
-        background: #e0e7ff;
-        color: #3730a3;
-        font-weight: 600;
-        font-size: 0.85rem;
-      }
-
-      .config-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-      }
-
-      .config-item {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .config-title {
-        margin: 0;
-        font-weight: 600;
-        color: #0f172a;
-      }
-
-      .config-description {
-        margin: 0;
-        color: var(--muted);
-        font-size: 0.9rem;
-      }
-
-      .config-actions {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        align-items: flex-start;
-      }
-
-      .config-path {
-        flex: 1;
-        min-width: 260px;
-        padding: 12px 14px;
-        border-radius: 10px;
-        background: var(--surface);
-        border: 1px dashed var(--card-border);
-        font-size: 0.9rem;
-        color: #0f172a;
-        word-break: break-word;
-      }
-
-      .config-path.empty {
-        color: var(--muted);
-        font-style: italic;
-      }
-
-      .button-group {
-        display: flex;
-        flex-direction: column;
-        gap: 18px;
-      }
-
-      .action-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        align-items: center;
-      }
-
-      .button {
-        border: none;
-        border-radius: 10px;
-        padding: 12px 20px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition:
-          transform 0.15s ease,
-          box-shadow 0.15s ease,
-          background 0.2s ease;
-      }
-
-      .button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
-      }
-
-      .button-primary {
-        background: var(--accent);
-        color: #fff;
-        box-shadow: 0 12px 20px rgba(37, 99, 235, 0.25);
-      }
-
-      .button-primary:hover:not(:disabled) {
-        background: var(--accent-dark);
-        transform: translateY(-1px);
-      }
-
-      .button-tonal {
-        background: var(--surface);
-        color: #0f172a;
-        border: 1px solid var(--card-border);
-      }
-
-      .button-warning {
-        background: var(--warning);
-        color: #fff;
-      }
-
-      .button-danger {
-        background: var(--danger);
-        color: #fff;
-      }
-
-      .button-success {
-        background: var(--success);
-        color: #fff;
-      }
-
-      .helper-text {
-        margin: 0;
-        color: var(--muted);
-        font-size: 0.9rem;
-      }
-
-      .status-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 24px;
-      }
-
-      .config-actions,
-      .action-buttons {
-        align-items: stretch;
-      }
-
-      .status {
-        border-radius: 14px;
-        padding: 18px;
-        border: 1px solid var(--card-border);
-        background: var(--surface);
-        font-weight: 600;
-      }
-
-      .status[data-state='idle'] {
-        border-color: #cbd5f5;
-        background: #eef2ff;
-        color: #1d4ed8;
-      }
-
-      .status[data-state='running'] {
-        border-color: #fde047;
-        background: #fef9c3;
-        color: #92400e;
-      }
-
-      .status[data-state='success'] {
-        border-color: rgba(22, 163, 74, 0.4);
-        background: #ecfdf5;
-        color: #065f46;
-      }
-
-      .status[data-state='error'] {
-        border-color: rgba(220, 38, 38, 0.4);
-        background: #fef2f2;
-        color: #991b1b;
-      }
-
-      .progress-wrapper {
-        margin-top: 18px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .progress-track {
-        flex: 1;
-        height: 12px;
-        border-radius: 999px;
-        background: #e5e7eb;
-        overflow: hidden;
-      }
-
-      .progress-bar {
-        height: 100%;
-        width: 0%;
-        border-radius: inherit;
-        background: linear-gradient(90deg, #38bdf8, #2563eb);
-        transition: width 0.2s ease;
-      }
-
-      .progress-value {
-        min-width: 48px;
-        text-align: right;
-        font-variant-numeric: tabular-nums;
-        font-weight: 600;
-        color: #0f172a;
-      }
-
-      .progress-log {
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        max-height: 320px;
-        overflow-y: auto;
-      }
-
-      .progress-log li {
-        margin: 0;
-        padding: 12px 14px;
-        border-radius: 12px;
-        background: var(--surface);
-        border: 1px solid var(--card-border);
-        color: #0f172a;
-        font-size: 0.92rem;
-      }
-
-      .update-card {
-        background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-        border-color: #7dd3fc;
-      }
-
-      .update-content {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
-
-      .update-status {
-        padding: 12px 16px;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.7);
-        border: 1px solid rgba(125, 211, 252, 0.3);
-        color: #0c4a6e;
-        font-weight: 500;
-        font-size: 0.95rem;
-      }
-
-      .update-status.update-available {
-        background: #fef3c7;
-        border-color: #fbbf24;
-        color: #92400e;
-      }
-
-      .update-status.update-downloaded {
-        background: #d1fae5;
-        border-color: #34d399;
-        color: #065f46;
-      }
-
-      .update-status.update-error {
-        background: #fee2e2;
-        border-color: #f87171;
-        color: #991b1b;
-      }
-
-      .update-progress-wrapper {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .update-actions {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-      }
-
-      @media (max-width: 720px) {
-        body {
-          padding: 24px 18px 32px;
-        }
-
-        .hero,
-        .status-grid {
-          flex-direction: column;
-        }
-
-        .status-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .config-actions {
-          flex-direction: column;
-        }
-
-        .action-buttons {
-          flex-direction: column;
-          align-items: stretch;
-        }
-
-        .card,
-        .hero {
-          padding: 20px;
-        }
-      }
-
-      @media (max-width: 1024px) {
-        body {
-          padding: 24px 18px 32px;
-        }
-
-        .app-shell {
-          width: calc(100vw - 36px);
-          gap: 18px;
-        }
-
-        .hero {
-          flex-direction: column;
-        }
-
-        .status-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .config-actions {
-          flex-direction: column;
-        }
-
-        .config-path {
-          min-width: 0;
-          width: 100%;
-        }
-
-        .action-buttons {
-          flex-direction: column;
-        }
-      }
-    </style>
+    <link rel="stylesheet" href="./src/index.css" />
   </head>
   <body>
     <main class="app-shell">
       <header class="hero">
-        <div>
-          <p class="hero-eyebrow">Ferramenta interna</p>
+        <div class="hero-info">
+          <p class="eyebrow" style="color: rgba(255, 255, 255, 0.75)">Ferramenta interna</p>
           <h1>Backup Developer</h1>
           <p>Configure as pastas uma única vez e acompanhe todo o progresso em tempo real.</p>
-          <p style="font-size: 0.85rem; margin-top: 8px; opacity: 0.9">
-            Versão 1.1.1 - Sistema de atualização automática
+          <p style="font-size: 0.8rem; margin-top: 8px; opacity: 0.8">
+            Versão 1.1.15 • Sistema de backup automatizado
           </p>
         </div>
-        <div class="chip">
-          <span class="chip-dot"></span>
-          <span id="status-chip-text">Pronto para executar</span>
+        <div class="hero-actions">
+          <button class="theme-toggle-btn" id="theme-toggle-btn" title="Alternar tema">
+            <svg
+              id="theme-toggle-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+            </svg>
+          </button>
+          <div class="chip">
+            <span class="chip-dot"></span>
+            <span id="status-chip-text">Pronto para executar</span>
+          </div>
         </div>
       </header>
 
@@ -490,9 +54,29 @@
           </div>
           <div class="update-actions">
             <button class="button button-tonal" id="check-updates-button">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+              </svg>
               Verificar atualizações
             </button>
             <button class="button button-success" id="install-update-button" style="display: none">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+              </svg>
               Baixar atualização
             </button>
           </div>
@@ -512,12 +96,24 @@
             <div>
               <p class="config-title">Pasta de origem</p>
               <p class="config-description">
-                Arquivos que serão compactados e enviados para o backup.
+                Arquivos e projetos que serão compactados. Arraste uma pasta aqui ou selecione.
               </p>
             </div>
-            <div class="config-actions">
+            <div class="drop-zone" id="source-drop-zone">
               <div class="config-path empty" id="source-path">Não configurada</div>
               <button class="button button-tonal" id="select-source-button">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                  />
+                </svg>
                 Selecionar pasta
               </button>
             </div>
@@ -525,39 +121,82 @@
           <div class="config-item">
             <div>
               <p class="config-title">Pasta de destino</p>
-              <p class="config-description">Local onde o arquivo final (.zip) será salvo.</p>
+              <p class="config-description">
+                Local onde o backup final (.zip) será salvo. Arraste uma pasta aqui ou selecione.
+              </p>
             </div>
-            <div class="config-actions">
+            <div class="drop-zone" id="dest-drop-zone">
               <div class="config-path empty" id="dest-path">Não configurada</div>
-              <button class="button button-tonal" id="select-dest-button">Selecionar pasta</button>
+              <button class="button button-tonal" id="select-dest-button">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+                  />
+                </svg>
+                Selecionar pasta
+              </button>
             </div>
           </div>
+
           <div class="config-item">
             <div>
-              <p class="config-title">Diretórios extras</p>
-              <p class="config-description">Incluir outros diretórios importantes no backup.</p>
+              <p class="config-title">Filtros de exclusão</p>
+              <p class="config-description">
+                Pastas ignoradas no processo de backup. Adicione novos nomes de pastas abaixo.
+              </p>
+            </div>
+            <div class="ignored-manager">
+              <div class="ignored-input-group">
+                <input
+                  type="text"
+                  id="new-ignored-input"
+                  class="input-text"
+                  placeholder="Adicionar pasta a ignorar (ex: .git, dist)..."
+                />
+                <button class="button button-primary" id="add-ignored-button">Adicionar</button>
+              </div>
+              <div class="ignored-tags-wrapper" id="ignored-tags-list">
+                <!-- Chips populados por Javascript -->
+              </div>
+            </div>
+          </div>
+
+          <div class="config-item">
+            <div>
+              <p class="config-title">Diretórios adicionais</p>
+              <p class="config-description">
+                Incluir outros diretórios predefinidos de desenvolvimento.
+              </p>
             </div>
             <div class="config-actions">
               <label
                 style="
                   display: flex;
                   align-items: center;
-                  gap: 8px;
+                  gap: 10px;
                   cursor: pointer;
-                  padding: 12px;
+                  padding: 14px;
                   background: var(--surface);
-                  border-radius: 10px;
+                  border-radius: 12px;
                   border: 1px solid var(--card-border);
                   width: 100%;
+                  user-select: none;
                 "
               >
                 <input
                   type="checkbox"
                   id="include-xampp-checkbox"
-                  style="width: 18px; height: 18px"
+                  style="width: 18px; height: 18px; cursor: pointer"
                 />
-                <span style="font-size: 0.9rem; color: #0f172a"
-                  >Incluir XAMPP (/Applications/XAMPP/xamppfiles/htdocs)</span
+                <span style="font-size: 0.9rem; font-weight: 500"
+                  >Incluir pasta XAMPP (/Applications/XAMPP/xamppfiles/htdocs)</span
                 >
               </label>
             </div>
@@ -573,13 +212,66 @@
           </div>
         </div>
         <div class="action-buttons">
-          <button class="button button-primary" id="backup-button">Executar backup agora</button>
-          <button class="button button-warning" id="pause-button" hidden>Pausar</button>
-          <button class="button button-danger" id="cancel-button" hidden>Cancelar</button>
+          <button class="button button-primary" id="backup-button">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
+            Executar backup agora
+          </button>
+          <button class="button button-warning" id="pause-button" hidden>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="6" y="4" width="4" height="16" />
+              <rect x="14" y="4" width="4" height="16" />
+            </svg>
+            Pausar
+          </button>
+          <button class="button button-danger" id="cancel-button" hidden>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            </svg>
+            Cancelar
+          </button>
         </div>
-        <p class="helper-text">
-          Use “Pausar” para congelar momentaneamente o processo ou “Cancelar” para interromper tudo.
-        </p>
+        <div class="helper-text">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="width: 16px; height: 16px"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+          <span
+            >Use “Pausar” para congelar momentaneamente o processo ou “Cancelar” para interromper
+            tudo.</span
+          >
+        </div>
       </section>
 
       <section class="status-grid">
@@ -590,7 +282,22 @@
               <h2>Status e progresso</h2>
             </div>
           </div>
-          <div class="status" id="status" data-state="idle">Aguardando ação.</div>
+          <div class="status" id="status" data-state="idle">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="width: 18px; height: 18px"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            <span id="status-text-content">Aguardando ação.</span>
+          </div>
           <div class="progress-wrapper">
             <div class="progress-track">
               <div class="progress-bar" id="progress-bar"></div>
@@ -598,6 +305,7 @@
             <span class="progress-value" id="progress-value">0%</span>
           </div>
         </div>
+
         <div class="card log-card">
           <div class="section-heading">
             <div>
@@ -606,6 +314,37 @@
             </div>
           </div>
           <ul class="progress-log" id="progress"></ul>
+        </div>
+      </section>
+
+      <section class="card history-card" id="history-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Histórico de Arquivos</p>
+            <h2>Backups criados</h2>
+          </div>
+          <button class="button button-tonal" id="clear-history-button">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="width: 14px; height: 14px"
+            >
+              <polyline points="3 6 5 6 21 6" />
+              <path
+                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+              />
+              <line x1="10" y1="11" x2="10" y2="17" />
+              <line x1="14" y1="11" x2="14" y2="17" />
+            </svg>
+            Limpar Histórico
+          </button>
+        </div>
+        <div class="history-list" id="history-list">
+          <!-- Populado dinamicamente via JS -->
         </div>
       </section>
     </main>

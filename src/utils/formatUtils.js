@@ -1,8 +1,4 @@
-const {
-  BYTES_BASE,
-  BYTES_UNITS,
-  BYTES_DECIMAL_PLACES_THRESHOLD
-} = require('../constants');
+const { BYTES_BASE, BYTES_UNITS, BYTES_DECIMAL_PLACES_THRESHOLD } = require('../constants');
 
 /**
  * Utilitários para formatação de dados
@@ -20,12 +16,10 @@ const formatBytes = (bytes) => {
 
   const i = Math.floor(Math.log(bytes) / Math.log(BYTES_BASE));
   const value = bytes / Math.pow(BYTES_BASE, i);
-  const decimalPlaces =
-    value >= BYTES_DECIMAL_PLACES_THRESHOLD || i === 0 ? 0 : 1;
+  const decimalPlaces = value >= BYTES_DECIMAL_PLACES_THRESHOLD || i === 0 ? 0 : 1;
   return `${value.toFixed(decimalPlaces)} ${BYTES_UNITS[i]}`;
 };
 
 module.exports = {
   formatBytes
 };
-

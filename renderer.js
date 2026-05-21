@@ -1,4 +1,5 @@
 window.addEventListener('DOMContentLoaded', async () => {
+  // Elementos padrão do backup
   const triggerButton = document.getElementById('backup-button');
   const pauseButton = document.getElementById('pause-button');
   const cancelButton = document.getElementById('cancel-button');
@@ -7,10 +8,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   const sourcePathElement = document.getElementById('source-path');
   const destPathElement = document.getElementById('dest-path');
   const statusText = document.getElementById('status');
+  const statusTextContent = document.getElementById('status-text-content');
   const progressList = document.getElementById('progress');
   const progressBar = document.getElementById('progress-bar');
   const progressValue = document.getElementById('progress-value');
   const includeXamppCheckbox = document.getElementById('include-xampp-checkbox');
+  const statusChipText = document.getElementById('status-chip-text');
 
   // Elementos de atualização
   const updateCard = document.getElementById('update-card');
@@ -20,7 +23,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   const updateProgressValue = document.getElementById('update-progress-value');
   const checkUpdatesButton = document.getElementById('check-updates-button');
   const installUpdateButton = document.getElementById('install-update-button');
-  const statusChipText = document.getElementById('status-chip-text');
+
+  // Novos elementos de interação
+  const themeToggleBtn = document.getElementById('theme-toggle-btn');
+  const themeToggleIcon = document.getElementById('theme-toggle-icon');
+  const sourceDropZone = document.getElementById('source-drop-zone');
+  const destDropZone = document.getElementById('dest-drop-zone');
+  const ignoredTagsList = document.getElementById('ignored-tags-list');
+  const newIgnoredInput = document.getElementById('new-ignored-input');
+  const addIgnoredButton = document.getElementById('add-ignored-button');
+  const historyList = document.getElementById('history-list');
+  const clearHistoryButton = document.getElementById('clear-history-button');
 
   if (
     !triggerButton ||
@@ -36,6 +49,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     !progressValue ||
     !window.backup
   ) {
+    console.error('Elementos obrigatórios do DOM não foram encontrados.');
     return;
   }
 
@@ -43,14 +57,62 @@ window.addEventListener('DOMContentLoaded', async () => {
   let isPaused = false;
   let currentSourceDir = null;
   let currentDestDir = null;
+  let currentIgnoredDirs = [];
+  let activeTheme = 'auto';
 
+  // SVG Icons para o alternador de temas
+  const moonIconSvg = `<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>`;
+  const sunIconSvg = `<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>`;
+
+  // === CONTROLE DE TEMAS ===
+  const applyTheme = (theme) => {
+    activeTheme = theme;
+    const isDarkSystem = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if (theme === 'dark' || (theme === 'auto' && isDarkSystem)) {
+      document.body.classList.add('theme-dark');
+      document.body.classList.remove('theme-light');
+      themeToggleIcon.innerHTML = sunIconSvg;
+      themeToggleBtn.title = 'Mudar para tema claro';
+    } else {
+      document.body.classList.add('theme-light');
+      document.body.classList.remove('theme-dark');
+      themeToggleIcon.innerHTML = moonIconSvg;
+      themeToggleBtn.title = 'Mudar para tema escuro';
+    }
+  };
+
+  // Detecta mudança de tema no sistema operacional automaticamente
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (activeTheme === 'auto') {
+      applyTheme('auto');
+    }
+  });
+
+  themeToggleBtn.addEventListener('click', async () => {
+    const newTheme = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
+    applyTheme(newTheme);
+    await window.backup.setTheme(newTheme);
+  });
+
+  // === CONFIGURAÇÕES E ESTADO VISUAL ===
   const setPauseButtonVisualState = (pausedState) => {
     if (pausedState) {
-      pauseButton.textContent = 'Continuar';
+      pauseButton.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        Continuar
+      `;
       pauseButton.classList.remove('button-warning');
       pauseButton.classList.add('button-success');
     } else {
-      pauseButton.textContent = 'Pausar';
+      pauseButton.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+        </svg>
+        Pausar
+      `;
       pauseButton.classList.remove('button-success');
       pauseButton.classList.add('button-warning');
     }
@@ -66,10 +128,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     cancelButton.hidden = true;
   };
 
-  /**
-   * Atualiza a exibição do caminho de origem
-   * @param {string|null} path - Caminho a ser exibido
-   */
   const updateSourcePath = (path) => {
     currentSourceDir = path;
     if (path) {
@@ -79,13 +137,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       sourcePathElement.textContent = 'Não configurada';
       sourcePathElement.classList.add('empty');
     }
-    updateBackupButtonState();
   };
 
-  /**
-   * Atualiza a exibição do caminho de destino
-   * @param {string|null} path - Caminho a ser exibido
-   */
   const updateDestPath = (path) => {
     currentDestDir = path;
     if (path) {
@@ -95,25 +148,201 @@ window.addEventListener('DOMContentLoaded', async () => {
       destPathElement.textContent = 'Não configurada';
       destPathElement.classList.add('empty');
     }
-    updateBackupButtonState();
   };
 
-  /**
-   * Atualiza o estado do botão de backup baseado na configuração
-   */
-  const updateBackupButtonState = () => {
-    // Sempre habilitado pois temos valores padrão
-    triggerButton.disabled = false;
-    triggerButton.title = '';
+  // === RENDERS INTERATIVOS (CHIPS E HISTÓRICO) ===
+  const renderIgnoredDirs = (dirs) => {
+    currentIgnoredDirs = dirs || [];
+    ignoredTagsList.innerHTML = '';
+
+    if (currentIgnoredDirs.length === 0) {
+      ignoredTagsList.innerHTML =
+        '<span style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">Nenhuma pasta ignorada</span>';
+      return;
+    }
+
+    currentIgnoredDirs.forEach((dir) => {
+      const chip = document.createElement('div');
+      chip.className = 'ignored-tag';
+      chip.innerHTML = `
+        <span>${dir}</span>
+        <button class="ignored-tag-remove" data-dir="${dir}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      `;
+
+      // Evento para remover chip
+      chip.querySelector('.ignored-tag-remove').addEventListener('click', async (e) => {
+        e.preventDefault();
+        const dirToRemove = e.currentTarget.dataset.dir;
+        const updatedDirs = currentIgnoredDirs.filter((d) => d !== dirToRemove);
+        await window.backup.setIgnoredDirs(updatedDirs);
+        renderIgnoredDirs(updatedDirs);
+        appendProgress(`Filtro de exclusão removido: ${dirToRemove}`);
+      });
+
+      ignoredTagsList.appendChild(chip);
+    });
   };
 
-  /**
-   * Carrega a configuração salva ou usa valores padrão
-   */
+  const renderBackupHistory = async () => {
+    try {
+      const res = await window.backup.getBackupHistory();
+      if (!res.success) throw new Error(res.error);
+
+      const history = res.history || [];
+      historyList.innerHTML = '';
+
+      if (history.length === 0) {
+        historyList.innerHTML = '<div class="history-empty">Nenhum backup realizado ainda.</div>';
+        return;
+      }
+
+      history.forEach((item) => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'history-item';
+
+        const dateStr = new Date(item.timestamp).toLocaleString('pt-BR');
+
+        itemEl.innerHTML = `
+          <div class="history-item-details">
+            <div class="history-item-title">${dateStr}</div>
+            <div class="history-item-meta">
+              <span><strong>Tamanho:</strong> ${item.size}</span>
+              <span><strong>Destino:</strong> ${item.destDir}</span>
+            </div>
+          </div>
+          <div class="history-actions-group">
+            <button class="button button-tonal button-icon-only reveal-btn" title="Mostrar no Finder" data-path="${item.path}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </button>
+          </div>
+        `;
+
+        itemEl.querySelector('.reveal-btn').addEventListener('click', async (e) => {
+          const path = e.currentTarget.dataset.path;
+          const revealResult = await window.backup.revealInFinder(path);
+          if (!revealResult.success) {
+            setStatus(`Erro ao revelar arquivo: ${revealResult.error}`, 'error');
+          }
+        });
+
+        historyList.appendChild(itemEl);
+      });
+    } catch (err) {
+      console.error('Erro ao renderizar histórico de backups:', err);
+      historyList.innerHTML =
+        '<div class="history-empty" style="color: var(--danger);">Não foi possível carregar o histórico.</div>';
+    }
+  };
+
+  // Limpar histórico
+  clearHistoryButton.addEventListener('click', async () => {
+    if (
+      confirm(
+        'Tem certeza que deseja limpar todo o histórico de backups da tela? Isso não excluirá os arquivos físicos.'
+      )
+    ) {
+      await window.backup.clearBackupHistory();
+      renderBackupHistory();
+    }
+  });
+
+  // Adicionar pasta a ignorar
+  const handleAddIgnored = async () => {
+    const value = newIgnoredInput.value.trim();
+    if (!value) return;
+
+    if (currentIgnoredDirs.includes(value)) {
+      newIgnoredInput.value = '';
+      return;
+    }
+
+    const updatedDirs = [...currentIgnoredDirs, value];
+    await window.backup.setIgnoredDirs(updatedDirs);
+    renderIgnoredDirs(updatedDirs);
+    newIgnoredInput.value = '';
+    appendProgress(`Filtro de exclusão adicionado: ${value}`);
+  };
+
+  addIgnoredButton.addEventListener('click', handleAddIgnored);
+  newIgnoredInput.addEventListener('keyup', (e) => {
+    if (e.key === 'Enter') {
+      handleAddIgnored();
+    }
+  });
+
+  // === LÓGICA DE DRAG & DROP ===
+  const setupDragAndDrop = () => {
+    // Área de Origem
+    sourceDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      sourceDropZone.classList.add('drag-active');
+    });
+
+    sourceDropZone.addEventListener('dragleave', () => {
+      sourceDropZone.classList.remove('drag-active');
+    });
+
+    sourceDropZone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      sourceDropZone.classList.remove('drag-active');
+
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        setStatus('Validando pasta de origem...', 'idle');
+        const res = await window.backup.setSourceDir(file.path);
+
+        if (res.success) {
+          updateSourcePath(res.path);
+          setStatus('Pasta de origem configurada via Drag & Drop!', 'success');
+          appendProgress(`📁 Origem alterada para: ${res.path}`);
+        } else {
+          setStatus(res.error, 'error');
+        }
+      }
+    });
+
+    // Área de Destino
+    destDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      destDropZone.classList.add('drag-active');
+    });
+
+    destDropZone.addEventListener('dragleave', () => {
+      destDropZone.classList.remove('drag-active');
+    });
+
+    destDropZone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      destDropZone.classList.remove('drag-active');
+
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        setStatus('Validando pasta de destino...', 'idle');
+        const res = await window.backup.setDestDir(file.path);
+
+        if (res.success) {
+          updateDestPath(res.path);
+          setStatus('Pasta de destino configurada via Drag & Drop!', 'success');
+          appendProgress(`💾 Destino alterado para: ${res.path}`);
+        } else {
+          setStatus(res.error, 'error');
+        }
+      }
+    });
+  };
+
+  setupDragAndDrop();
+
+  // === CARREGAMENTO DA CONFIGURAÇÃO ===
   const loadConfig = async () => {
     try {
       const config = await window.backup.getConfig();
-      // Sempre mostra os valores padrão se não houver configuração
       const sourceDir = config.sourceDir || '/Users/thiago/Developer';
       const destDir =
         config.destDir ||
@@ -121,27 +350,26 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       updateSourcePath(sourceDir);
       updateDestPath(destDir);
+      renderIgnoredDirs(config.ignoredDirs);
+      applyTheme(config.theme || 'auto');
     } catch (error) {
       console.error('Erro ao carregar configuração:', error);
-      // Em caso de erro, usa valores padrão
       updateSourcePath('/Users/thiago/Developer');
       updateDestPath(
         '/Users/thiago/Library/CloudStorage/GoogleDrive-thiagowip@gmail.com/Meu Drive/Backup-developer'
       );
+      applyTheme('auto');
     }
   };
 
-  // Carrega configuração ao iniciar
+  // Carrega configurações e histórico no início
   await loadConfig();
+  await renderBackupHistory();
   hideControlButtons();
 
-  /**
-   * Gerencia mensagens de atualização
-   */
+  // === AUTO-UPDATER LOGIC ===
   const setupUpdateHandlers = () => {
-    if (!window.backup.onUpdateMessage) {
-      return;
-    }
+    if (!window.backup.onUpdateMessage) return;
 
     window.backup.onUpdateMessage((message) => {
       updateCard.style.display = 'block';
@@ -190,43 +418,38 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   };
 
-  /**
-   * Handler para verificar atualizações manualmente
-   */
   checkUpdatesButton?.addEventListener('click', async () => {
     try {
       checkUpdatesButton.disabled = true;
-      checkUpdatesButton.textContent = 'Verificando...';
+      checkUpdatesButton.innerHTML = 'Verificando...';
       await window.backup.checkForUpdates();
     } catch (error) {
       updateStatus.textContent = `Erro ao verificar atualizações: ${error.message}`;
       updateStatus.className = 'update-status update-error';
     } finally {
       checkUpdatesButton.disabled = false;
-      checkUpdatesButton.textContent = 'Verificar atualizações';
+      checkUpdatesButton.innerHTML = 'Verificar atualizações';
     }
   });
 
-  /**
-   * Handler para instalar atualização
-   */
   installUpdateButton?.addEventListener('click', async () => {
     try {
       installUpdateButton.disabled = true;
-      installUpdateButton.textContent = 'Abrindo download...';
+      installUpdateButton.innerHTML = 'Abrindo download...';
       const downloadUrl = installUpdateButton.dataset.downloadUrl;
       await window.backup.installUpdate(downloadUrl);
-      installUpdateButton.textContent = 'Download aberto';
+      installUpdateButton.innerHTML = 'Download aberto';
     } catch (error) {
       updateStatus.textContent = `Erro ao abrir download: ${error.message}`;
       updateStatus.className = 'update-status update-error';
       installUpdateButton.disabled = false;
-      installUpdateButton.textContent = 'Baixar atualização';
+      installUpdateButton.innerHTML = 'Baixar atualização';
     }
   });
 
   setupUpdateHandlers();
 
+  // === BACKUP LOGIC ===
   const appendProgress = (message) => {
     const item = document.createElement('li');
     item.textContent = message;
@@ -259,7 +482,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   const setStatus = (message, type = 'idle') => {
-    statusText.textContent = message;
+    statusTextContent.textContent = message;
     statusText.dataset.state = type;
   };
 
@@ -268,13 +491,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     setProgress(0);
   };
 
-  // Handler para selecionar pasta de origem
+  // Seletor de origem
   selectSourceButton.addEventListener('click', async () => {
     try {
       const result = await window.backup.selectSourceDir();
       if (result.success) {
         updateSourcePath(result.path);
         setStatus('Pasta de origem configurada', 'success');
+        appendProgress(`📁 Origem alterada para: ${result.path}`);
       }
     } catch (error) {
       console.error('Erro ao selecionar pasta de origem:', error);
@@ -282,13 +506,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Handler para selecionar pasta de destino
+  // Seletor de destino
   selectDestButton.addEventListener('click', async () => {
     try {
       const result = await window.backup.selectDestDir();
       if (result.success) {
         updateDestPath(result.path);
         setStatus('Pasta de destino configurada', 'success');
+        appendProgress(`💾 Destino alterado para: ${result.path}`);
       }
     } catch (error) {
       console.error('Erro ao selecionar pasta de destino:', error);
@@ -296,6 +521,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // Pausar/Continuar
   pauseButton.addEventListener('click', async () => {
     try {
       const result = await window.backup.togglePause();
@@ -306,6 +532,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // Cancelar
   cancelButton.addEventListener('click', async () => {
     try {
       await window.backup.cancel();
@@ -316,14 +543,13 @@ window.addEventListener('DOMContentLoaded', async () => {
       triggerButton.disabled = false;
       isBackupRunning = false;
       isPaused = false;
-      updateBackupButtonState();
     } catch (error) {
       console.error('Erro ao cancelar:', error);
     }
   });
 
+  // Iniciar Backup
   triggerButton.addEventListener('click', async () => {
-    // Usa valores padrão se não houver configuração
     const sourceDir = currentSourceDir || '/Users/thiago/Developer';
     const destDir =
       currentDestDir ||
@@ -344,6 +570,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (result.success) {
         setStatus('Backup concluído com sucesso!', 'success');
         appendProgress(`Arquivo criado em: ${result.path}`);
+        await renderBackupHistory(); // Atualiza a tabela do histórico
       } else {
         setStatus(`Erro: ${result.error}`, 'error');
       }
@@ -355,7 +582,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       setPauseButtonVisualState(false);
       isBackupRunning = false;
       isPaused = false;
-      updateBackupButtonState();
     }
   });
 });

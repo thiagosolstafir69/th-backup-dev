@@ -12,12 +12,14 @@
 ### 💡 Por que isso é importante?
 
 **Antes (v1.0.5)**:
+
 - ❌ Backup incluía todas as pastas `node_modules`
 - ❌ Milhares de arquivos desnecessários
 - ❌ Backup muito lento
 - ❌ Arquivo ZIP gigante
 
 **Agora (v1.0.6)**:
+
 - ✅ Ignora automaticamente `node_modules`
 - ✅ Backup muito mais rápido
 - ✅ Arquivo ZIP até 90% menor
@@ -75,6 +77,7 @@
 ### 🔄 Atualizando de versões anteriores
 
 Se você já tem uma versão anterior instalada, basta:
+
 1. Baixar o novo DMG
 2. Arrastar para Applications (substituir quando solicitado)
 3. Pronto!
@@ -91,9 +94,9 @@ Se você já tem uma versão anterior instalada, basta:
 
 ### 🎯 Benefícios da v1.0.6
 
-| Aspecto | Antes | Agora |
-|---------|-------|-------|
-| Velocidade | Lento | **Muito mais rápido** ⚡ |
-| Tamanho do ZIP | Gigante | **Até 90% menor** 📦 |
-| Arquivos escaneados | Todos | **Apenas necessários** ✅ |
-| node_modules | ✅ Incluído | ❌ **Ignorado** 🎉 |
+| Aspecto             | Antes       | Agora                     |
+| ------------------- | ----------- | ------------------------- |
+| Velocidade          | Lento       | **Muito mais rápido** ⚡  |
+| Tamanho do ZIP      | Gigante     | **Até 90% menor** 📦      |
+| Arquivos escaneados | Todos       | **Apenas necessários** ✅ |
+| node_modules        | ✅ Incluído | ❌ **Ignorado** 🎉        |

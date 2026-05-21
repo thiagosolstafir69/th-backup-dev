@@ -109,4 +109,3 @@ class BackupState {
 }
 
 module.exports = BackupState;
-

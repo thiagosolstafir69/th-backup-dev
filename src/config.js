@@ -16,7 +16,9 @@ class ConfigManager {
     this.defaultConfig = {
       sourceDir: this.defaultSourceDir,
       destDir: this.defaultDestDir,
-      ignoredDirs: [...DEFAULT_IGNORED_DIRS]
+      ignoredDirs: [...DEFAULT_IGNORED_DIRS],
+      history: [],
+      theme: 'auto'
     };
     this.config = null;
   }
@@ -112,6 +114,57 @@ class ConfigManager {
   }
 
   /**
+   * Obtém o histórico de backups
+   * @returns {Promise<Object[]>}
+   */
+  async getHistory() {
+    const config = await this.load();
+    return config.history || [];
+  }
+
+  /**
+   * Adiciona uma entrada ao histórico de backups
+   * @param {Object} entry - Entrada de histórico
+   * @returns {Promise<void>}
+   */
+  async addHistoryEntry(entry) {
+    const config = await this.load();
+    const history = config.history || [];
+    history.unshift(entry);
+    // Limita o histórico a 15 itens
+    if (history.length > 15) {
+      history.pop();
+    }
+    await this.save({ history });
+  }
+
+  /**
+   * Limpa o histórico de backups
+   * @returns {Promise<void>}
+   */
+  async clearHistory() {
+    await this.save({ history: [] });
+  }
+
+  /**
+   * Obtém o tema atual
+   * @returns {Promise<string>}
+   */
+  async getTheme() {
+    const config = await this.load();
+    return config.theme || 'auto';
+  }
+
+  /**
+   * Define o tema
+   * @param {string} theme - 'auto', 'light' ou 'dark'
+   * @returns {Promise<void>}
+   */
+  async setTheme(theme) {
+    await this.save({ theme });
+  }
+
+  /**
    * Reseta a configuração para os valores padrão
    * @returns {Promise<void>}
    */
@@ -144,4 +197,3 @@ class ConfigManager {
 const configManager = new ConfigManager();
 
 module.exports = configManager;
-

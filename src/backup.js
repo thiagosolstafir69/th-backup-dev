@@ -412,10 +412,10 @@ const createProgressMessage = (payload) => {
   return typeof payload === 'string'
     ? { text: payload }
     : {
-      text: '',
-      type: 'status',
-      ...payload
-    };
+        text: '',
+        type: 'status',
+        ...payload
+      };
 };
 
 /**
@@ -436,7 +436,7 @@ const createProgressMessage = (payload) => {
  * @throws {BackupError} Em caso de erro durante o backup
  */
 const createBackup = async (
-  onProgress = () => { },
+  onProgress = () => {},
   sourceDir = null,
   destDir = null,
   includeXampp = false
