@@ -31,20 +31,5 @@ contextBridge.exposeInMainWorld('backup', {
     return () => {
       ipcRenderer.removeListener(channel, handler);
     };
-  },
-  onUpdateMessage: (callback) => {
-    if (typeof callback !== 'function') {
-      return () => {};
-    }
-
-    const channel = 'update-message';
-    const handler = (_event, message) => {
-      callback(message);
-    };
-
-    ipcRenderer.on(channel, handler);
-    return () => {
-      ipcRenderer.removeListener(channel, handler);
-    };
   }
 });

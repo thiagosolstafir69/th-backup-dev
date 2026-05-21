@@ -4,9 +4,11 @@
 
 // Intervalos e limites
 const PAUSE_CHECK_INTERVAL_MS = 100;
-const FILES_SCAN_PROGRESS_INTERVAL = 500;
-const COMPRESSION_LEVEL = 9;
+const FILES_SCAN_PROGRESS_INTERVAL = 1000;
+const COMPRESSION_LEVEL = 1;
 const PROGRESS_UPDATE_INTERVAL_MS = 100;
+const STAT_BATCH_SIZE = 64;
+const ZIP_PAUSE_CHECK_INTERVAL = 100;
 
 // Níveis de progresso
 const MIN_PROGRESS_PERCENT = 0;
@@ -21,8 +23,8 @@ const BYTES_DECIMAL_PLACES_THRESHOLD = 10;
 const DEFAULT_IGNORED_DIRS = ['node_modules', 'dist', 'build', '.DS_Store'];
 
 // Nomes de arquivos
-const TEMP_FILE_PREFIX = 'backup-developer-';
-const TEMP_FILE_SUFFIX = '.zip';
+const TEMP_FILE_PREFIX = '.backup-developer-';
+const TEMP_FILE_SUFFIX = '.partial.zip';
 const FINAL_FILE_PREFIX = 'backup-developer-';
 const FINAL_FILE_SUFFIX = '.zip';
 
@@ -31,6 +33,8 @@ module.exports = {
   FILES_SCAN_PROGRESS_INTERVAL,
   COMPRESSION_LEVEL,
   PROGRESS_UPDATE_INTERVAL_MS,
+  STAT_BATCH_SIZE,
+  ZIP_PAUSE_CHECK_INTERVAL,
   MIN_PROGRESS_PERCENT,
   MAX_PROGRESS_PERCENT,
   BYTES_BASE,

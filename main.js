@@ -41,61 +41,22 @@ function sendUpdateMessage(event, data) {
   }
 }
 
-/**
- * Configura e inicia verificação de atualizações
- */
-function setupAutoUpdater() {
-  const checkUpdates = async () => {
-    try {
-      await updater.checkForUpdates((event, data) => {
-        sendUpdateMessage(event, data);
-
-        if (event === 'update-available' && data.downloadUrl) {
-          // Quando há atualização disponível, mostra diálogo
-          dialog
-            .showMessageBox(mainWindow, {
-              type: 'info',
-              title: 'Atualização disponível',
-              message: `Uma nova versão está disponível: ${data.version}`,
-              detail: 'Deseja baixar e instalar agora?',
-              buttons: ['Baixar agora', 'Depois'],
-              defaultId: 0,
-              cancelId: 1
-            })
-            .then((result) => {
-              if (result.response === 0 && data.downloadUrl) {
-                // Abre o link de download no navegador
-                shell.openExternal(data.downloadUrl);
-              }
-            });
-        }
-      });
-    } catch (error) {
-      // Erro silencioso - não interrompe o funcionamento do app
-      console.error('Erro ao verificar atualizações:', error);
-    }
-  };
-
-  // Verifica atualizações ao iniciar (com delay de 3 segundos)
-  setTimeout(() => {
-    checkUpdates();
-  }, 3000);
-
-  // Verifica atualizações a cada 4 horas
-  setInterval(
-    () => {
-      checkUpdates();
-    },
-    4 * 60 * 60 * 1000
-  ); // 4 horas
-}
-
 app.whenReady().then(() => {
   if (process.platform === 'win32' || process.platform === 'darwin') {
     app.setAppUserModelId('com.thiago.backupdeveloper');
   }
   createWindow();
-  setupAutoUpdater();
+
+  // Verifica atualizações ao iniciar (com delay de 3 segundos)
+  setTimeout(async () => {
+    try {
+      await updater.checkForUpdates((event, data) => {
+        sendUpdateMessage(event, data);
+      });
+    } catch (error) {
+      console.error('Erro ao verificar atualizações automáticas:', error);
+    }
+  }, 3000);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

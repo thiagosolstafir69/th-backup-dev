@@ -5,10 +5,11 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "test": "node --test",
     "build:mac": "electron-builder --mac dmg",
     "gerar-dmg-local": "bash scripts/gerar-dmg-local.sh",
-    "lint": "eslint . --ext .js",
-    "lint:fix": "eslint . --ext .js --fix",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .js",
+    "lint:fix": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .js --fix",
     "format": "prettier --write \"**/*.{js,json,md,html}\"",
     "format:check": "prettier --check \"**/*.{js,json,md,html}\""
   },
@@ -20,11 +21,12 @@
     "electron": "^39.0.0",
     "electron-builder": "^26.0.12",
     "eslint": "^9.39.1",
-    "prettier": "^3.6.2"
+    "png2icons": "^2.0.1",
+    "prettier": "^3.6.2",
+    "sharp": "^0.34.5"
   },
   "dependencies": {
     "archiver": "^7.0.1",
-    "electron-updater": "^6.6.2",
     "fs-extra": "^11.3.2"
   },
   "build": {
@@ -62,7 +64,7 @@
       "target": [
         "dmg"
       ],
-      "icon": "build/icon.icns",
+      "icon": "build/app-icon.icns",
       "category": "public.app-category.utilities",
       "hardenedRuntime": false,
       "gatekeeperAssess": false
@@ -72,7 +74,7 @@
     ],
     "dmg": {
       "artifactName": "BackupDeveloper-${version}.dmg",
-      "icon": "build/icon.icns",
+      "icon": "build/app-icon.icns",
       "backgroundColor": "#f5f5f5"
     },
     "publish": [
