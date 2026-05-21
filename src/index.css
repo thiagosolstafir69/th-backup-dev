@@ -1243,7 +1243,7 @@ body.theme-light .progress-log {
   flex: 1;
   padding-right: 12px;
   color: var(--text);
-  font-size: 0.82rem;
+  font-size: 0.7575rem;
   line-height: 1.3;
 }
 
