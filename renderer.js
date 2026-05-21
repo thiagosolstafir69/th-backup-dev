@@ -14,6 +14,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   const progressValue = document.getElementById('progress-value');
   const includeXamppCheckbox = document.getElementById('include-xampp-checkbox');
   const statusChipText = document.getElementById('status-chip-text');
+  const actionCard = document.querySelector('.action-card');
+  const actionOverview = document.getElementById('action-overview');
+  const actionPrimaryState = document.getElementById('action-primary-state');
+  const actionSecondaryState = document.getElementById('action-secondary-state');
+  const terminalContainer = document.getElementById('terminal-container');
+  const logsToggleButton = document.getElementById('logs-toggle-button');
 
   // Elementos de atualização
   const updateCard = document.getElementById('update-card');
@@ -98,6 +104,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   // === CONFIGURAÇÕES E ESTADO VISUAL ===
+  const setActionSummary = (state, primary, secondary) => {
+    if (actionOverview) {
+      actionOverview.dataset.state = state;
+    }
+    if (actionPrimaryState) {
+      actionPrimaryState.textContent = primary;
+    }
+    if (actionSecondaryState) {
+      actionSecondaryState.textContent = secondary;
+    }
+  };
+
   const setPauseButtonVisualState = (pausedState) => {
     if (pausedState) {
       pauseButton.innerHTML = `
@@ -106,7 +124,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         </svg>
         Continuar
       `;
-      pauseButton.classList.remove('button-warning');
+      pauseButton.classList.remove('button-primary', 'button-warning');
       pauseButton.classList.add('button-success');
     } else {
       pauseButton.innerHTML = `
@@ -115,42 +133,61 @@ window.addEventListener('DOMContentLoaded', async () => {
         </svg>
         Pausar
       `;
-      pauseButton.classList.remove('button-success');
-      pauseButton.classList.add('button-warning');
+      pauseButton.classList.remove('button-success', 'button-warning');
+      pauseButton.classList.add('button-primary');
     }
   };
 
   const showControlButtons = () => {
+    actionCard?.classList.add('is-active');
     pauseButton.hidden = false;
     cancelButton.hidden = false;
+    cancelButton.classList.add('is-secondary-action');
   };
 
   const hideControlButtons = () => {
+    actionCard?.classList.remove('is-active');
     pauseButton.hidden = true;
     cancelButton.hidden = true;
+    cancelButton.classList.remove('is-secondary-action');
+  };
+
+  const renderPath = (element, path) => {
+    if (path) {
+      const segments = path.split('/').filter(Boolean);
+      const name = segments[segments.length - 1] || path;
+      const parent = path.slice(0, Math.max(1, path.lastIndexOf('/'))) || '/';
+      element.innerHTML = '';
+      const nameElement = document.createElement('span');
+      const parentElement = document.createElement('span');
+      nameElement.className = 'path-name';
+      parentElement.className = 'path-parent';
+      nameElement.textContent = name;
+      parentElement.textContent = parent;
+      element.append(nameElement, parentElement);
+      element.title = path;
+      element.classList.remove('empty');
+    } else {
+      element.innerHTML = '<span class="path-name">Não configurada</span>';
+      element.removeAttribute('title');
+      element.classList.add('empty');
+    }
   };
 
   const updateSourcePath = (path) => {
     currentSourceDir = path;
-    if (path) {
-      sourcePathElement.textContent = path;
-      sourcePathElement.classList.remove('empty');
-    } else {
-      sourcePathElement.textContent = 'Não configurada';
-      sourcePathElement.classList.add('empty');
-    }
+    renderPath(sourcePathElement, path);
   };
 
   const updateDestPath = (path) => {
     currentDestDir = path;
-    if (path) {
-      destPathElement.textContent = path;
-      destPathElement.classList.remove('empty');
-    } else {
-      destPathElement.textContent = 'Não configurada';
-      destPathElement.classList.add('empty');
-    }
+    renderPath(destPathElement, path);
   };
+
+  logsToggleButton?.addEventListener('click', () => {
+    const isCollapsed = terminalContainer?.classList.toggle('is-collapsed');
+    logsToggleButton.textContent = isCollapsed ? 'Expandir logs' : 'Recolher logs';
+  });
 
   // === RENDERS INTERATIVOS (CHIPS E HISTÓRICO) ===
   const renderIgnoredDirs = (dirs) => {
@@ -500,6 +537,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     if (message.text && message.type !== 'progress') {
       appendProgress(message.text);
+      if (message.text.includes('Backup pausado')) {
+        setStatus('Backup pausado. Aguardando continuar...', 'paused');
+        setActionSummary('paused', 'Backup pausado', 'Clique em Continuar para retomar do ponto atual.');
+        statusChipText.textContent = 'Backup pausado';
+      }
     }
   });
 
@@ -549,6 +591,15 @@ window.addEventListener('DOMContentLoaded', async () => {
       const result = await window.backup.togglePause();
       isPaused = result.isPaused;
       setPauseButtonVisualState(isPaused);
+      if (isPaused) {
+        setStatus('Backup pausado. Aguardando continuar...', 'paused');
+        setActionSummary('paused', 'Backup pausado', 'Clique em Continuar para retomar do ponto atual.');
+        statusChipText.textContent = 'Backup pausado';
+      } else {
+        setStatus('Executando backup...', 'running');
+        setActionSummary('running', 'Backup em andamento', 'Use Pausar se precisar congelar a operação temporariamente.');
+        statusChipText.textContent = 'Executando backup';
+      }
     } catch (error) {
       console.error('Erro ao pausar/continuar:', error);
     }
@@ -559,6 +610,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     try {
       await window.backup.cancel();
       setStatus('Backup cancelado pelo usuário', 'error');
+      setActionSummary('error', 'Backup cancelado', 'A operação foi interrompida antes da conclusão.');
+      statusChipText.textContent = 'Backup cancelado';
       appendProgress('❌ Backup cancelado');
       hideControlButtons();
       setPauseButtonVisualState(false);
@@ -584,6 +637,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     isBackupRunning = true;
     resetProgress();
     setStatus('Executando backup...', 'running');
+    setActionSummary('running', 'Backup em andamento', 'Use Pausar se precisar congelar a operação temporariamente.');
+    statusChipText.textContent = 'Executando backup';
     appendProgress('Solicitando backup...');
 
     try {
@@ -591,13 +646,19 @@ window.addEventListener('DOMContentLoaded', async () => {
       const result = await window.backup.start(sourceDir, destDir, includeXampp);
       if (result.success) {
         setStatus('Backup concluído com sucesso!', 'success');
+        setActionSummary('success', 'Backup concluído', 'O arquivo compactado foi salvo no destino configurado.');
+        statusChipText.textContent = 'Backup concluído';
         appendProgress(`Arquivo criado em: ${result.path}`);
         await renderBackupHistory(); // Atualiza a tabela do histórico
       } else {
         setStatus(`Erro: ${result.error}`, 'error');
+        setActionSummary('error', 'Falha no backup', result.error || 'Não foi possível concluir a operação.');
+        statusChipText.textContent = 'Falha no backup';
       }
     } catch (error) {
       setStatus(`Erro ao executar backup: ${error.message}`, 'error');
+      setActionSummary('error', 'Falha no backup', error.message || 'Não foi possível concluir a operação.');
+      statusChipText.textContent = 'Falha no backup';
     } finally {
       triggerButton.disabled = false;
       hideControlButtons();

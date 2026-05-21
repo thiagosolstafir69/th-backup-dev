@@ -9,13 +9,15 @@
     <div class="blur-blob blob-1"></div>
     <div class="blur-blob blob-2"></div>
     <div class="blur-blob blob-3"></div>
+    
     <main class="app-shell">
+      <!-- Cabeçalho Principal (Hero) -->
       <header class="hero">
         <div class="hero-info">
           <p class="eyebrow">Ferramenta interna</p>
           <h1>Backup Developer</h1>
           <p>Configure as pastas uma única vez e acompanhe todo o progresso em tempo real.</p>
-          <p class="version-info">Versão 1.1.16 • Sistema de backup automatizado</p>
+          <p class="version-info">Versão 1.1.17 • Sistema de backup automatizado</p>
         </div>
         <div class="hero-actions">
           <button class="theme-toggle-btn" id="theme-toggle-btn" title="Alternar tema">
@@ -38,6 +40,7 @@
         </div>
       </header>
 
+      <!-- Card de Atualização do App (Oculto por padrão) -->
       <section class="card update-card" id="update-card" style="display: none">
         <div class="section-heading">
           <div>
@@ -84,25 +87,154 @@
         </div>
       </section>
 
-      <section class="card config-card">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Configurações</p>
-            <h2>Pastas monitoradas</h2>
-          </div>
-          <span class="badge">Obrigatório</span>
-        </div>
-        <div class="config-grid">
-          <div class="config-item">
-            <div>
-              <p class="config-title">Pasta de origem</p>
-              <p class="config-description">
-                Arquivos e projetos que serão compactados. Arraste uma pasta aqui ou selecione.
-              </p>
+      <!-- Corpo do Dashboard em Duas Colunas -->
+      <div class="dashboard-body">
+        
+        <!-- COLUNA ESQUERDA (Configurações) -->
+        <aside class="dashboard-sidebar">
+          <section class="card config-card">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Configurações</p>
+                <h2>Pastas monitoradas</h2>
+              </div>
+              <span class="badge">Obrigatório</span>
             </div>
-            <div class="drop-zone" id="source-drop-zone">
-              <div class="config-path empty" id="source-path">Não configurada</div>
-              <button class="button button-tonal" id="select-source-button">
+            
+            <div class="config-grid">
+              <!-- Pasta de Origem -->
+              <div class="config-item">
+                <div>
+                  <p class="config-title">Pasta de origem</p>
+                  <p class="config-description">Arquivos e projetos que serão compactados.</p>
+                </div>
+                <div class="drop-zone" id="source-drop-zone">
+                  <div class="config-path empty" id="source-path">
+                    <span class="path-name">Não configurada</span>
+                  </div>
+                  <button class="button button-tonal" id="select-source-button">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                    </svg>
+                    Selecionar
+                  </button>
+                </div>
+              </div>
+
+              <!-- Pasta de Destino -->
+              <div class="config-item">
+                <div>
+                  <p class="config-title">Pasta de destino</p>
+                  <p class="config-description">Local onde o backup final (.zip) será salvo.</p>
+                </div>
+                <div class="drop-zone" id="dest-drop-zone">
+                  <div class="config-path empty" id="dest-path">
+                    <span class="path-name">Não configurada</span>
+                  </div>
+                  <button class="button button-tonal" id="select-dest-button">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                    </svg>
+                    Selecionar
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filtros de Exclusão -->
+              <div class="config-item">
+                <div>
+                  <p class="config-title">Filtros de exclusão</p>
+                  <p class="config-description">Pastas ignoradas no processo de compactação.</p>
+                </div>
+                <div class="ignored-manager">
+                  <div class="ignored-input-group">
+                    <input
+                      type="text"
+                      id="new-ignored-input"
+                      class="input-text"
+                      placeholder="Ignorar (ex: .git, dist)..."
+                    />
+                    <button class="button button-primary" id="add-ignored-button">Adicionar</button>
+                  </div>
+                  <div class="ignored-tags-wrapper" id="ignored-tags-list">
+                    <!-- Chips populados por Javascript -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Diretórios Adicionais (Switch Toggle) -->
+              <div class="config-item">
+                <div>
+                  <p class="config-title">Diretórios adicionais</p>
+                  <p class="config-description">Incluir outros diretórios predefinidos.</p>
+                </div>
+                <div class="config-actions">
+                  <label class="switch-toggle-label" for="include-xampp-checkbox">
+                    <span>Incluir pasta XAMPP (/Applications/XAMPP/.../htdocs)</span>
+                    <div class="switch">
+                      <input
+                        type="checkbox"
+                        id="include-xampp-checkbox"
+                      />
+                      <span class="slider"></span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Nível de Compactação -->
+              <div class="config-item">
+                <div>
+                  <p class="config-title">Nível de compactação</p>
+                  <p class="config-description">Otimize a velocidade ou o tamanho final.</p>
+                </div>
+                <div class="config-actions">
+                  <select id="compression-level-select" class="select-input">
+                    <option value="0">0 - Sem compactação (Ultra rápido)</option>
+                    <option value="1">1 - Compactação rápida (Recomendado)</option>
+                    <option value="5">5 - Compactação equilibrada</option>
+                    <option value="9">9 - Compactação máxima (Lento)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
+        </aside>
+
+        <!-- COLUNA DIREITA (Execução, Status, Logs, Histórico) -->
+        <div class="dashboard-main">
+          
+          <!-- Card de Execução e Ações -->
+          <section class="card action-card">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Execução</p>
+                <h2>Controle do backup</h2>
+              </div>
+            </div>
+            <div class="action-overview" id="action-overview" data-state="idle">
+              <span class="action-state-dot"></span>
+              <div>
+                <strong id="action-primary-state">Pronto para iniciar</strong>
+                <small id="action-secondary-state">As pastas configuradas serão compactadas no destino escolhido.</small>
+              </div>
+            </div>
+            <div class="action-buttons">
+              <button class="button button-primary" id="backup-button">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -111,24 +243,11 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
-                  <path
-                    d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
-                  />
+                  <polygon points="5 3 19 12 5 21 5 3" />
                 </svg>
-                Selecionar pasta
+                Executar backup agora
               </button>
-            </div>
-          </div>
-          <div class="config-item">
-            <div>
-              <p class="config-title">Pasta de destino</p>
-              <p class="config-description">
-                Local onde o backup final (.zip) será salvo. Arraste uma pasta aqui ou selecione.
-              </p>
-            </div>
-            <div class="drop-zone" id="dest-drop-zone">
-              <div class="config-path empty" id="dest-path">Não configurada</div>
-              <button class="button button-tonal" id="select-dest-button">
+              <button class="button button-warning" id="pause-button" hidden>
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -137,234 +256,140 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
-                  <path
-                    d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
-                  />
+                  <rect x="6" y="4" width="4" height="16" />
+                  <rect x="14" y="4" width="4" height="16" />
                 </svg>
-                Selecionar pasta
+                Pausar
+              </button>
+              <button class="button button-danger" id="cancel-button" hidden>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                </svg>
+                Cancelar
               </button>
             </div>
-          </div>
-
-          <div class="config-item">
-            <div>
-              <p class="config-title">Filtros de exclusão</p>
-              <p class="config-description">
-                Pastas ignoradas no processo de backup. Adicione novos nomes de pastas abaixo.
-              </p>
-            </div>
-            <div class="ignored-manager">
-              <div class="ignored-input-group">
-                <input
-                  type="text"
-                  id="new-ignored-input"
-                  class="input-text"
-                  placeholder="Adicionar pasta a ignorar (ex: .git, dist)..."
-                />
-                <button class="button button-primary" id="add-ignored-button">Adicionar</button>
-              </div>
-              <div class="ignored-tags-wrapper" id="ignored-tags-list">
-                <!-- Chips populados por Javascript -->
-              </div>
-            </div>
-          </div>
-
-          <div class="config-item">
-            <div>
-              <p class="config-title">Diretórios adicionais</p>
-              <p class="config-description">
-                Incluir outros diretórios predefinidos de desenvolvimento.
-              </p>
-            </div>
-            <div class="config-actions">
-              <label
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 10px;
-                  cursor: pointer;
-                  padding: 14px;
-                  background: var(--surface);
-                  border-radius: 12px;
-                  border: 1px solid var(--card-border);
-                  width: 100%;
-                  user-select: none;
-                "
+            <div class="helper-text">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="width: 14px; height: 14px"
               >
-                <input
-                  type="checkbox"
-                  id="include-xampp-checkbox"
-                  style="width: 18px; height: 18px; cursor: pointer"
-                />
-                <span style="font-size: 0.9rem; font-weight: 500"
-                  >Incluir pasta XAMPP (/Applications/XAMPP/xamppfiles/htdocs)</span
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <span>Use “Pausar” para congelar momentaneamente ou “Cancelar” para interromper.</span>
+            </div>
+          </section>
+
+          <!-- Grid de Acompanhamento (Status e Terminal de Logs) -->
+          <section class="status-grid">
+            
+            <!-- Card de Progresso -->
+            <div class="card status-card">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Acompanhamento</p>
+                  <h2>Status e progresso</h2>
+                </div>
+              </div>
+              <div class="status" id="status" data-state="idle">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="width: 16px; height: 16px"
                 >
-              </label>
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                <span id="status-text-content">Aguardando ação.</span>
+              </div>
+              <div class="progress-wrapper">
+                <div class="progress-track">
+                  <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                <span class="progress-value" id="progress-value">0%</span>
+              </div>
             </div>
-          </div>
 
-          <div class="config-item">
-            <div>
-              <p class="config-title">Nível de compactação</p>
-              <p class="config-description">
-                Ajuste o nível para otimizar velocidade ou tamanho do arquivo.
-              </p>
+            <!-- Terminal de Logs -->
+            <div class="card log-card">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Histórico</p>
+                  <h2>Eventos recentes</h2>
+                </div>
+                <button class="button button-tonal log-toggle-button" id="logs-toggle-button" type="button">
+                  Expandir logs
+                </button>
+              </div>
+              
+              <div class="terminal-container is-collapsed" id="terminal-container">
+                <div class="terminal-header">
+                  <div class="terminal-buttons">
+                    <span class="terminal-btn close"></span>
+                    <span class="terminal-btn minimize"></span>
+                    <span class="terminal-btn expand"></span>
+                  </div>
+                  <span class="terminal-title">backup-console.sh</span>
+                  <div class="terminal-status">
+                    <span class="status-indicator-dot"></span>
+                    <span class="status-indicator-text">LIVE</span>
+                  </div>
+                </div>
+                <ul class="progress-log" id="progress"></ul>
+              </div>
             </div>
-            <div class="config-actions">
-              <select id="compression-level-select" class="select-input">
-                <option value="0">0 - Sem compactação (Ultra rápido)</option>
-                <option value="1">1 - Compactação rápida (Recomendado)</option>
-                <option value="5">5 - Compactação equilibrada</option>
-                <option value="9">9 - Compactação máxima (Muito lento)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </section>
+          </section>
 
-      <section class="card action-card">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Execução</p>
-            <h2>Controle do backup</h2>
-          </div>
-        </div>
-        <div class="action-buttons">
-          <button class="button button-primary" id="backup-button">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <polygon points="5 3 19 12 5 21 5 3" />
-            </svg>
-            Executar backup agora
-          </button>
-          <button class="button button-warning" id="pause-button" hidden>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <rect x="6" y="4" width="4" height="16" />
-              <rect x="14" y="4" width="4" height="16" />
-            </svg>
-            Pausar
-          </button>
-          <button class="button button-danger" id="cancel-button" hidden>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-            </svg>
-            Cancelar
-          </button>
-        </div>
-        <div class="helper-text">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            style="width: 16px; height: 16px"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="16" x2="12" y2="12" />
-            <line x1="12" y1="8" x2="12.01" y2="8" />
-          </svg>
-          <span
-            >Use “Pausar” para congelar momentaneamente o processo ou “Cancelar” para interromper
-            tudo.</span
-          >
-        </div>
-      </section>
-
-      <section class="status-grid">
-        <div class="card status-card">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Acompanhamento</p>
-              <h2>Status e progresso</h2>
+          <!-- Histórico de Arquivos Criados -->
+          <section class="card history-card" id="history-section">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Histórico de Arquivos</p>
+                <h2>Backups criados</h2>
+              </div>
+              <button class="button button-tonal" id="clear-history-button">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="width: 14px; height: 14px"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
+                Limpar Histórico
+              </button>
             </div>
-          </div>
-          <div class="status" id="status" data-state="idle">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              style="width: 18px; height: 18px"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="16" x2="12" y2="12" />
-              <line x1="12" y1="8" x2="12.01" y2="8" />
-            </svg>
-            <span id="status-text-content">Aguardando ação.</span>
-          </div>
-          <div class="progress-wrapper">
-            <div class="progress-track">
-              <div class="progress-bar" id="progress-bar"></div>
+            <div class="history-list" id="history-list">
+              <!-- Populado dinamicamente via JS -->
             </div>
-            <span class="progress-value" id="progress-value">0%</span>
-          </div>
-        </div>
+          </section>
 
-        <div class="card log-card">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Histórico</p>
-              <h2>Eventos recentes</h2>
-            </div>
-          </div>
-          <ul class="progress-log" id="progress"></ul>
         </div>
-      </section>
-
-      <section class="card history-card" id="history-section">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Histórico de Arquivos</p>
-            <h2>Backups criados</h2>
-          </div>
-          <button class="button button-tonal" id="clear-history-button">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              style="width: 14px; height: 14px"
-            >
-              <polyline points="3 6 5 6 21 6" />
-              <path
-                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-              />
-              <line x1="10" y1="11" x2="10" y2="17" />
-              <line x1="14" y1="11" x2="14" y2="17" />
-            </svg>
-            Limpar Histórico
-          </button>
-        </div>
-        <div class="history-list" id="history-list">
-          <!-- Populado dinamicamente via JS -->
-        </div>
-      </section>
+      </div>
     </main>
     <script src="./renderer.js"></script>
   </body>
