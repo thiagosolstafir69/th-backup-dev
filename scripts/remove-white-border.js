@@ -44,10 +44,14 @@ async function removeWhiteBorder() {
     while (stack.length > 0) {
       const [x, y] = stack.pop();
 
-      if (x < 0 || x >= width || y < 0 || y >= height) continue;
+      if (x < 0 || x >= width || y < 0 || y >= height) {
+        continue;
+      }
 
       const idx = y * width + x;
-      if (visited[idx]) continue;
+      if (visited[idx]) {
+        continue;
+      }
       visited[idx] = 1;
 
       const pixelIdx = idx * bytesPerPixel;

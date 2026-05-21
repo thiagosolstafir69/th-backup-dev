@@ -26,8 +26,12 @@ async function createAppleSquircleIcon() {
   // Helper to check if a point is inside a rounded rectangle
   function isInside(x, y, rectX, rectY, rectW, rectH, r) {
     // Check main body
-    if (x >= rectX + r && x <= rectX + rectW - r && y >= rectY && y <= rectY + rectH) return true;
-    if (x >= rectX && x <= rectX + rectW && y >= rectY + r && y <= rectY + rectH - r) return true;
+    if (x >= rectX + r && x <= rectX + rectW - r && y >= rectY && y <= rectY + rectH) {
+      return true;
+    }
+    if (x >= rectX && x <= rectX + rectW && y >= rectY + r && y <= rectY + rectH - r) {
+      return true;
+    }
 
     // Check corners
     const corners = [
@@ -38,7 +42,9 @@ async function createAppleSquircleIcon() {
     ];
 
     for (const [cx, cy] of corners) {
-      if (Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) <= r) return true;
+      if (Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2)) <= r) {
+        return true;
+      }
     }
     return false;
   }

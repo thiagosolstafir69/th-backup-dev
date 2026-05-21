@@ -18,7 +18,8 @@ class ConfigManager {
       destDir: this.defaultDestDir,
       ignoredDirs: [...DEFAULT_IGNORED_DIRS],
       history: [],
-      theme: 'auto'
+      theme: 'auto',
+      compressionLevel: 1
     };
     this.config = null;
   }
@@ -162,6 +163,24 @@ class ConfigManager {
    */
   async setTheme(theme) {
     await this.save({ theme });
+  }
+
+  /**
+   * Obtém o nível de compressão atual
+   * @returns {Promise<number>}
+   */
+  async getCompressionLevel() {
+    const config = await this.load();
+    return typeof config.compressionLevel === 'number' ? config.compressionLevel : 1;
+  }
+
+  /**
+   * Define o nível de compressão
+   * @param {number} level - Nível de compressão de 0 a 9
+   * @returns {Promise<void>}
+   */
+  async setCompressionLevel(level) {
+    await this.save({ compressionLevel: level });
   }
 
   /**

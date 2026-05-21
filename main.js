@@ -80,10 +80,10 @@ const normalizeProgressMessage = (payload) => {
   return typeof payload === 'string'
     ? { text: payload }
     : {
-        text: '',
-        type: 'status',
-        ...payload
-      };
+      text: '',
+      type: 'status',
+      ...payload
+    };
 };
 
 /**
@@ -266,8 +266,21 @@ ipcMain.handle('get-config', async () => {
     sourceDir: config.sourceDir,
     destDir: config.destDir,
     ignoredDirs: config.ignoredDirs ? Array.from(config.ignoredDirs) : [],
-    theme: config.theme || 'auto'
+    theme: config.theme || 'auto',
+    compressionLevel: config.compressionLevel !== undefined ? config.compressionLevel : 1
   };
+});
+
+/**
+ * Handler para definir o nível de compressão
+ */
+ipcMain.handle('set-compression-level', async (event, level) => {
+  try {
+    await configManager.setCompressionLevel(Number(level));
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
 
 /**
@@ -359,7 +372,7 @@ ipcMain.handle('install-update', async (event, downloadUrl) => {
       return { success: true };
     }
     // Se não tiver URL, abre a página de releases
-    shell.openExternal(`https://github.com/thiagosolstafir69/th-backup-dev/releases/latest`);
+    shell.openExternal('https://github.com/thiagosolstafir69/th-backup-dev/releases/latest');
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };

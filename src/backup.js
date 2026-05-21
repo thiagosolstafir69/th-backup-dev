@@ -14,7 +14,6 @@ const configManager = require('./config');
 const {
   PAUSE_CHECK_INTERVAL_MS,
   FILES_SCAN_PROGRESS_INTERVAL,
-  COMPRESSION_LEVEL,
   PROGRESS_UPDATE_INTERVAL_MS,
   STAT_BATCH_SIZE,
   ZIP_PAUSE_CHECK_INTERVAL,
@@ -237,10 +236,10 @@ const collectDirectoryEntries = async (sourceDir, prefix, ignoredDirs, onProgres
  * @param {Function} onProgress - Callback para atualizar progresso
  * @returns {Promise<void>}
  */
-const zipEntries = (entries, outPath, totalSize, onProgress) =>
+const zipEntries = (entries, outPath, totalSize, compressionLevel, onProgress) =>
   new Promise((resolve, reject) => {
     const output = fs.createWriteStream(outPath);
-    const archive = archiver('zip', { zlib: { level: COMPRESSION_LEVEL } });
+    const archive = archiver('zip', { zlib: { level: compressionLevel } });
     backupState.setArchiveInstance(archive);
     let lastPercent = -1;
     let checkInterval = null;
@@ -354,12 +353,7 @@ const zipEntries = (entries, outPath, totalSize, onProgress) =>
           }
 
           try {
-            const stream = nativeFs.createReadStream(entry.fullPath);
-            stream.once('error', (err) => {
-              cleanup();
-              reject(err);
-            });
-            archive.append(stream, {
+            archive.file(entry.fullPath, {
               name: entry.archivePath,
               stats: entry.stats
             });
@@ -406,10 +400,10 @@ const createProgressMessage = (payload) => {
   return typeof payload === 'string'
     ? { text: payload }
     : {
-        text: '',
-        type: 'status',
-        ...payload
-      };
+      text: '',
+      type: 'status',
+      ...payload
+    };
 };
 
 /**
@@ -442,6 +436,7 @@ const createBackup = async (
   const finalSourceDir = sourceDir || config.sourceDir || configManager.getDefaultSourceDir();
   const finalDestDir = destDir || config.destDir || configManager.getDefaultDestDir();
   const ignoredDirs = await configManager.getIgnoredDirs();
+  const compressionLevel = config.compressionLevel !== undefined ? config.compressionLevel : 1;
 
   if (!finalSourceDir || !finalDestDir) {
     throw new Error(
@@ -533,7 +528,7 @@ const createBackup = async (
       )}). Iniciando compactação...`
     });
 
-    await zipEntries(collectedEntries, tmpZipPath, grandTotalSize, update);
+    await zipEntries(collectedEntries, tmpZipPath, grandTotalSize, compressionLevel, update);
 
     if (backupState.getCancelled()) {
       await cleanup();

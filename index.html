@@ -201,6 +201,39 @@
               </label>
             </div>
           </div>
+
+          <div class="config-item">
+            <div>
+              <p class="config-title">Nível de compactação</p>
+              <p class="config-description">
+                Ajuste o nível para otimizar velocidade ou tamanho do arquivo.
+              </p>
+            </div>
+            <div class="config-actions">
+              <select
+                id="compression-level-select"
+                style="
+                  width: 100%;
+                  padding: 12px;
+                  border-radius: 12px;
+                  background: var(--surface);
+                  border: 1px solid var(--card-border);
+                  color: var(--text);
+                  font-family: inherit;
+                  font-size: 0.9rem;
+                  font-weight: 500;
+                  cursor: pointer;
+                  outline: none;
+                  transition: border-color 0.2s ease;
+                "
+              >
+                <option value="0">0 - Sem compactação (Ultra rápido)</option>
+                <option value="1">1 - Compactação rápida (Recomendado)</option>
+                <option value="5">5 - Compactação equilibrada</option>
+                <option value="9">9 - Compactação máxima (Muito lento)</option>
+              </select>
+            </div>
+          </div>
         </div>
       </section>
 

@@ -20,7 +20,7 @@ const BYTES_UNITS = ['B', 'KB', 'MB', 'GB', 'TB'];
 const BYTES_DECIMAL_PLACES_THRESHOLD = 10;
 
 // Pastas ignoradas por padrão
-const DEFAULT_IGNORED_DIRS = ['node_modules', 'dist', 'build', '.DS_Store'];
+const DEFAULT_IGNORED_DIRS = ['node_modules', 'dist', 'build', '.DS_Store', '.git'];
 
 // Nomes de arquivos
 const TEMP_FILE_PREFIX = '.backup-developer-';

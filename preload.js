@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('backup', {
   clearBackupHistory: () => ipcRenderer.invoke('clear-backup-history'),
   revealInFinder: (path) => ipcRenderer.invoke('reveal-in-finder', path),
   setTheme: (theme) => ipcRenderer.invoke('set-theme', theme),
+  setCompressionLevel: (level) => ipcRenderer.invoke('set-compression-level', level),
   onProgress: (callback) => {
     if (typeof callback !== 'function') {
       return () => {};

@@ -75,29 +75,34 @@ test('createBackup gera ZIP, ignora diretórios configurados e remove arquivo pa
     );
 
     const progressMessages = [];
-    const backupPath = await createBackup((message) => {
-      progressMessages.push(message);
-    }, sourceDir, destDir, false);
+    const backupPath = await createBackup(
+      (message) => {
+        progressMessages.push(message);
+      },
+      sourceDir,
+      destDir,
+      false
+    );
 
     const archiveEntries = listZipEntries(backupPath);
     const destFiles = await fs.readdir(destDir);
 
     assert.match(path.basename(backupPath), /^backup-developer-.*\.zip$/);
-    assert.equal(destFiles.some((name) => name.endsWith('.partial.zip')), false);
+    assert.equal(
+      destFiles.some((name) => name.endsWith('.partial.zip')),
+      false
+    );
     assert.equal(archiveEntries.includes('src/app.js'), true);
     assert.equal(archiveEntries.includes('src/nested/notes.txt'), true);
     assert.equal(archiveEntries.includes('src/app-link.js'), true);
     assert.equal(archiveEntries.includes('node_modules/left-pad/index.js'), false);
     assert.equal(archiveEntries.includes('dist/bundle.js'), false);
     assert.equal(archiveEntries.includes('build/artifact.txt'), false);
+    assert.equal(archiveEntries.filter((entry) => entry.startsWith('many/file-')).length, 80);
     assert.equal(
-      archiveEntries.filter((entry) => entry.startsWith('many/file-')).length,
-      80
-    );
-    assert.equal(
-      progressMessages.some((message) =>
-        typeof message.text === 'string' &&
-        message.text.includes('Iniciando compactação')
+      progressMessages.some(
+        (message) =>
+          typeof message.text === 'string' && message.text.includes('Iniciando compactação')
       ),
       true
     );

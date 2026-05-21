@@ -19,8 +19,12 @@ function compareVersions(v1, v2) {
     const part1 = parts1[i] || 0;
     const part2 = parts2[i] || 0;
 
-    if (part1 < part2) return -1;
-    if (part1 > part2) return 1;
+    if (part1 < part2) {
+      return -1;
+    }
+    if (part1 > part2) {
+      return 1;
+    }
   }
 
   return 0;
@@ -102,12 +106,16 @@ function fetchLatestRelease() {
  */
 async function checkForUpdates(onStatus) {
   try {
-    if (onStatus) onStatus('checking-for-update');
+    if (onStatus) {
+      onStatus('checking-for-update');
+    }
 
     const latestRelease = await fetchLatestRelease();
 
     if (!latestRelease) {
-      if (onStatus) onStatus('update-not-available', { version: CURRENT_VERSION });
+      if (onStatus) {
+        onStatus('update-not-available', { version: CURRENT_VERSION });
+      }
       return null;
     }
 
@@ -123,7 +131,9 @@ async function checkForUpdates(onStatus) {
       }
       return latestRelease;
     } else {
-      if (onStatus) onStatus('update-not-available', { version: CURRENT_VERSION });
+      if (onStatus) {
+        onStatus('update-not-available', { version: CURRENT_VERSION });
+      }
       return null;
     }
   } catch (error) {

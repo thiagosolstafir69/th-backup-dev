@@ -17,18 +17,12 @@ async function convertSvgToPng() {
   const svgBuffer = fs.readFileSync(svgPath);
 
   // Convert to PNG at 1024x1024
-  await sharp(svgBuffer)
-    .resize(1024, 1024)
-    .png()
-    .toFile(pngPath);
+  await sharp(svgBuffer).resize(1024, 1024).png().toFile(pngPath);
 
   console.log('PNG saved to:', pngPath);
 
   // Also create a transparent version
-  await sharp(svgBuffer)
-    .resize(1024, 1024)
-    .png()
-    .toFile(transparentPngPath);
+  await sharp(svgBuffer).resize(1024, 1024).png().toFile(transparentPngPath);
 
   console.log('Transparent PNG saved to:', transparentPngPath);
 }

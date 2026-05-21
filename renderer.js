@@ -34,6 +34,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const addIgnoredButton = document.getElementById('add-ignored-button');
   const historyList = document.getElementById('history-list');
   const clearHistoryButton = document.getElementById('clear-history-button');
+  const compressionLevelSelect = document.getElementById('compression-level-select');
 
   if (
     !triggerButton ||
@@ -61,8 +62,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   let activeTheme = 'auto';
 
   // SVG Icons para o alternador de temas
-  const moonIconSvg = `<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>`;
-  const sunIconSvg = `<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>`;
+  const moonIconSvg = '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>';
+  const sunIconSvg =
+    '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>';
 
   // === CONTROLE DE TEMAS ===
   const applyTheme = (theme) => {
@@ -190,7 +192,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   const renderBackupHistory = async () => {
     try {
       const res = await window.backup.getBackupHistory();
-      if (!res.success) throw new Error(res.error);
+      if (!res.success) {
+        throw new Error(res.error);
+      }
 
       const history = res.history || [];
       historyList.innerHTML = '';
@@ -255,7 +259,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Adicionar pasta a ignorar
   const handleAddIgnored = async () => {
     const value = newIgnoredInput.value.trim();
-    if (!value) return;
+    if (!value) {
+      return;
+    }
 
     if (currentIgnoredDirs.includes(value)) {
       newIgnoredInput.value = '';
@@ -339,6 +345,13 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   setupDragAndDrop();
 
+  // Nível de compactação
+  compressionLevelSelect?.addEventListener('change', async () => {
+    const level = Number(compressionLevelSelect.value);
+    await window.backup.setCompressionLevel(level);
+    appendProgress(`Nível de compactação alterado para: ${level}`);
+  });
+
   // === CARREGAMENTO DA CONFIGURAÇÃO ===
   const loadConfig = async () => {
     try {
@@ -352,6 +365,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       updateDestPath(destDir);
       renderIgnoredDirs(config.ignoredDirs);
       applyTheme(config.theme || 'auto');
+      if (compressionLevelSelect) {
+        compressionLevelSelect.value =
+          config.compressionLevel !== undefined ? String(config.compressionLevel) : '1';
+      }
     } catch (error) {
       console.error('Erro ao carregar configuração:', error);
       updateSourcePath('/Users/thiago/Developer');
@@ -359,6 +376,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         '/Users/thiago/Library/CloudStorage/GoogleDrive-thiagowip@gmail.com/Meu Drive/Backup-developer'
       );
       applyTheme('auto');
+      if (compressionLevelSelect) {
+        compressionLevelSelect.value = '1';
+      }
     }
   };
 
@@ -369,51 +389,53 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // === AUTO-UPDATER LOGIC ===
   const setupUpdateHandlers = () => {
-    if (!window.backup.onUpdateMessage) return;
+    if (!window.backup.onUpdateMessage) {
+      return;
+    }
 
     window.backup.onUpdateMessage((message) => {
       updateCard.style.display = 'block';
 
       switch (message.event) {
-        case 'checking-for-update':
-          updateStatus.textContent = 'Verificando atualizações...';
-          updateStatus.className = 'update-status';
-          updateProgressWrapper.style.display = 'none';
-          installUpdateButton.style.display = 'none';
-          break;
+      case 'checking-for-update':
+        updateStatus.textContent = 'Verificando atualizações...';
+        updateStatus.className = 'update-status';
+        updateProgressWrapper.style.display = 'none';
+        installUpdateButton.style.display = 'none';
+        break;
 
-        case 'update-available':
-          updateStatus.textContent = `Nova versão disponível: ${message.version}`;
-          updateStatus.className = 'update-status update-available';
-          updateProgressWrapper.style.display = 'none';
-          installUpdateButton.style.display = 'block';
-          installUpdateButton.dataset.downloadUrl = message.downloadUrl || '';
-          statusChipText.textContent = 'Atualização disponível';
-          break;
+      case 'update-available':
+        updateStatus.textContent = `Nova versão disponível: ${message.version}`;
+        updateStatus.className = 'update-status update-available';
+        updateProgressWrapper.style.display = 'none';
+        installUpdateButton.style.display = 'block';
+        installUpdateButton.dataset.downloadUrl = message.downloadUrl || '';
+        statusChipText.textContent = 'Atualização disponível';
+        break;
 
-        case 'update-not-available':
-          updateStatus.textContent = `Você está usando a versão mais recente (${message.version || 'atual'})`;
-          updateStatus.className = 'update-status';
-          updateProgressWrapper.style.display = 'none';
-          installUpdateButton.style.display = 'none';
-          statusChipText.textContent = 'Pronto para executar';
-          break;
+      case 'update-not-available':
+        updateStatus.textContent = `Você está usando a versão mais recente (${message.version || 'atual'})`;
+        updateStatus.className = 'update-status';
+        updateProgressWrapper.style.display = 'none';
+        installUpdateButton.style.display = 'none';
+        statusChipText.textContent = 'Pronto para executar';
+        break;
 
-        case 'update-downloaded':
-          updateStatus.textContent = `Atualização disponível! Versão ${message.version} pronta para baixar.`;
-          updateStatus.className = 'update-status update-downloaded';
-          updateProgressWrapper.style.display = 'none';
-          installUpdateButton.style.display = 'block';
-          installUpdateButton.dataset.downloadUrl = message.downloadUrl || '';
-          statusChipText.textContent = 'Atualização pronta';
-          break;
+      case 'update-downloaded':
+        updateStatus.textContent = `Atualização disponível! Versão ${message.version} pronta para baixar.`;
+        updateStatus.className = 'update-status update-downloaded';
+        updateProgressWrapper.style.display = 'none';
+        installUpdateButton.style.display = 'block';
+        installUpdateButton.dataset.downloadUrl = message.downloadUrl || '';
+        statusChipText.textContent = 'Atualização pronta';
+        break;
 
-        case 'update-error':
-          updateStatus.textContent = `Erro ao verificar atualizações: ${message.message}`;
-          updateStatus.className = 'update-status update-error';
-          updateProgressWrapper.style.display = 'none';
-          installUpdateButton.style.display = 'none';
-          break;
+      case 'update-error':
+        updateStatus.textContent = `Erro ao verificar atualizações: ${message.message}`;
+        updateStatus.className = 'update-status update-error';
+        updateProgressWrapper.style.display = 'none';
+        installUpdateButton.style.display = 'none';
+        break;
       }
     });
   };
@@ -467,10 +489,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       typeof payload === 'string'
         ? { text: payload }
         : {
-            type: 'status',
-            text: '',
-            ...payload
-          };
+          type: 'status',
+          text: '',
+          ...payload
+        };
 
     if (typeof message.percent === 'number') {
       setProgress(message.percent);
