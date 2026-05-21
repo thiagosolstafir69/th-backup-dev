@@ -6,15 +6,16 @@
     <link rel="stylesheet" href="./src/index.css" />
   </head>
   <body>
+    <div class="blur-blob blob-1"></div>
+    <div class="blur-blob blob-2"></div>
+    <div class="blur-blob blob-3"></div>
     <main class="app-shell">
       <header class="hero">
         <div class="hero-info">
-          <p class="eyebrow" style="color: rgba(255, 255, 255, 0.75)">Ferramenta interna</p>
+          <p class="eyebrow">Ferramenta interna</p>
           <h1>Backup Developer</h1>
           <p>Configure as pastas uma única vez e acompanhe todo o progresso em tempo real.</p>
-          <p style="font-size: 0.8rem; margin-top: 8px; opacity: 0.8">
-            Versão 1.1.15 • Sistema de backup automatizado
-          </p>
+          <p class="version-info">Versão 1.1.16 • Sistema de backup automatizado</p>
         </div>
         <div class="hero-actions">
           <button class="theme-toggle-btn" id="theme-toggle-btn" title="Alternar tema">
@@ -210,23 +211,7 @@
               </p>
             </div>
             <div class="config-actions">
-              <select
-                id="compression-level-select"
-                style="
-                  width: 100%;
-                  padding: 12px;
-                  border-radius: 12px;
-                  background: var(--surface);
-                  border: 1px solid var(--card-border);
-                  color: var(--text);
-                  font-family: inherit;
-                  font-size: 0.9rem;
-                  font-weight: 500;
-                  cursor: pointer;
-                  outline: none;
-                  transition: border-color 0.2s ease;
-                "
-              >
+              <select id="compression-level-select" class="select-input">
                 <option value="0">0 - Sem compactação (Ultra rápido)</option>
                 <option value="1">1 - Compactação rápida (Recomendado)</option>
                 <option value="5">5 - Compactação equilibrada</option>
