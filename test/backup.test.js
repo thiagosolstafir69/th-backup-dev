@@ -111,6 +111,29 @@ test('createBackup gera ZIP, ignora diretórios configurados e remove arquivo pa
   });
 });
 
+test('createBackup suporta pastas com muitos arquivos sem estourar a pilha', async () => {
+  await withMockedConfig(async () => {
+    const workspaceDir = await makeTempDir('backup-dev-large-');
+    const sourceDir = path.join(workspaceDir, 'source');
+    const destDir = path.join(workspaceDir, 'dest');
+    const manyDir = path.join(sourceDir, 'many');
+
+    await fs.mkdir(manyDir, { recursive: true });
+
+    const fileCount = 15000;
+    for (let index = 0; index < fileCount; index += 1) {
+      await fs.writeFile(path.join(manyDir, `file-${index}.txt`), `content-${index}\n`);
+    }
+
+    const backupPath = await createBackup(() => {}, sourceDir, destDir, false);
+    const archiveEntries = listZipEntries(backupPath);
+
+    assert.equal(archiveEntries.filter((entry) => entry.startsWith('many/file-')).length, fileCount);
+
+    await fs.rm(workspaceDir, { recursive: true, force: true });
+  });
+});
+
 test('createBackup lança erro quando o diretório de origem não existe', async () => {
   await withMockedConfig(async () => {
     const workspaceDir = await makeTempDir('backup-dev-missing-source-');

@@ -51,6 +51,17 @@ const toArchiveEntryName = (baseDir, target, prefix = '') => {
 };
 
 /**
+ * Anexa itens a um array sem estourar a pilha de chamadas (evita push(...items) com arrays grandes)
+ * @param {Array} target - Array de destino
+ * @param {Array} items - Itens a anexar
+ */
+const appendAll = (target, items) => {
+  for (const item of items) {
+    target.push(item);
+  }
+};
+
+/**
  * Verifica se o backup está pausado e aguarda retomada
  * @param {Function} onProgress - Callback para atualizar progresso
  * @throws {BackupCancelledError} Se o backup foi cancelado
@@ -97,6 +108,7 @@ const collectDirectoryEntries = async (sourceDir, prefix, ignoredDirs, onProgres
   let totalSize = 0;
   let totalFiles = 0;
   const stack = [sourceDir];
+  const visitedDirs = new Set();
   const pendingFiles = [];
   const pendingSymlinks = [];
 
@@ -149,6 +161,18 @@ const collectDirectoryEntries = async (sourceDir, prefix, ignoredDirs, onProgres
   while (stack.length > 0) {
     await checkPause(onProgress);
     const currentDir = stack.pop();
+
+    let resolvedDir = currentDir;
+    try {
+      resolvedDir = await fsp.realpath(currentDir);
+    } catch {
+      // Mantém currentDir se realpath falhar; o bloco opendir tratará o erro
+    }
+
+    if (visitedDirs.has(resolvedDir)) {
+      continue;
+    }
+    visitedDirs.add(resolvedDir);
 
     try {
       const dirHandle = await fsp.opendir(currentDir);
@@ -511,7 +535,7 @@ const createBackup = async (
         ignoredDirs,
         update
       );
-      collectedEntries.push(...entries);
+      appendAll(collectedEntries, entries);
       grandTotalSize += totalSize;
       grandTotalFiles += totalFiles;
     }
