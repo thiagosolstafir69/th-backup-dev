@@ -504,7 +504,7 @@ ipcMain.handle('set-ignored-dirs', async (event, dirs) => {
  */
 ipcMain.handle('get-backup-history', async () => {
   try {
-    const history = await configManager.getHistory();
+    const history = await configManager.pruneMissingHistoryEntries();
     return { success: true, history };
   } catch (error) {
     return { success: false, error: error.message };
@@ -547,13 +547,26 @@ ipcMain.handle('export-backup-report', async (event, report) => {
  */
 ipcMain.handle('reveal-in-finder', async (event, itemPath) => {
   try {
-    const fs = require('fs-extra');
     if (await fs.pathExists(itemPath)) {
       shell.showItemInFolder(itemPath);
       return { success: true };
-    } else {
-      return { success: false, error: 'Arquivo não encontrado' };
     }
+
+    const parentDir = path.dirname(itemPath);
+    if (await fs.pathExists(parentDir)) {
+      const errorMessage = await shell.openPath(parentDir);
+      if (errorMessage) {
+        return { success: false, error: errorMessage };
+      }
+      return {
+        success: true,
+        fallback: true,
+        message: 'O backup antigo foi removido. Abrindo a pasta de destino.'
+      };
+    }
+
+    await configManager.pruneMissingHistoryEntries();
+    return { success: false, error: 'Arquivo não encontrado' };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -564,8 +577,8 @@ ipcMain.handle('reveal-in-finder', async (event, itemPath) => {
  */
 ipcMain.handle('open-backup-file', async (event, itemPath) => {
   try {
-    const fs = require('fs-extra');
     if (!(await fs.pathExists(itemPath))) {
+      await configManager.pruneMissingHistoryEntries();
       return { success: false, error: 'Arquivo não encontrado' };
     }
 

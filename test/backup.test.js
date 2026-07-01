@@ -350,6 +350,37 @@ test('config mantém apenas o histórico mais recente por destino', async () => 
   });
 });
 
+test('config remove entradas de histórico sem arquivo físico', async () => {
+  await withTempConfigPath(async () => {
+    const workspaceDir = await makeTempDir('backup-dev-history-prune-');
+    const existingBackup = path.join(workspaceDir, 'backup-developer-existing.zip');
+    const missingBackup = path.join(workspaceDir, 'backup-developer-missing.zip');
+
+    await fs.writeFile(existingBackup, 'backup\n');
+    await configManager.save({
+      history: [
+        {
+          id: 'existing',
+          destDir: workspaceDir,
+          path: existingBackup
+        },
+        {
+          id: 'missing',
+          destDir: workspaceDir,
+          path: missingBackup
+        }
+      ]
+    });
+
+    const history = await configManager.pruneMissingHistoryEntries();
+
+    assert.equal(history.length, 1);
+    assert.equal(history[0].id, 'existing');
+
+    await fs.rm(workspaceDir, { recursive: true, force: true });
+  });
+});
+
 test('utilitários formatam e sanitizam valores esperados', () => {
   const absolutePath = path.join(os.tmpdir(), 'backup-dev-utils');
 

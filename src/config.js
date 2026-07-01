@@ -1,5 +1,6 @@
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 const { DEFAULT_IGNORED_DIRS } = require('./constants');
 
 const DEFAULT_SCHEDULE = {
@@ -10,6 +11,8 @@ const DEFAULT_SCHEDULE = {
   profileId: null,
   lastRunKey: null
 };
+
+const createProfileId = () => `profile-${crypto.randomUUID()}`;
 
 /**
  * Gerenciador de configuração da aplicação
@@ -86,7 +89,7 @@ class ConfigManager {
   }
 
   normalizeProfile(profile, fallback = {}) {
-    const id = profile.id || fallback.id || `profile-${Date.now()}`;
+    const id = profile.id || fallback.id || createProfileId();
     return {
       id,
       name: profile.name || fallback.name || 'Principal',
@@ -245,7 +248,7 @@ class ConfigManager {
 
   async saveProfile(profile) {
     const config = await this.load();
-    const id = profile.id || `profile-${Date.now()}`;
+    const id = profile.id || createProfileId();
     const normalizedProfile = this.normalizeProfile({ ...profile, id });
     const profiles = config.profiles.filter((item) => item.id !== id);
     profiles.push(normalizedProfile);
@@ -321,6 +324,25 @@ class ConfigManager {
   async getHistory() {
     const config = await this.load();
     return config.history || [];
+  }
+
+  async pruneMissingHistoryEntries() {
+    const fs = require('fs-extra');
+    const config = await this.load();
+    const history = config.history || [];
+    const existingHistory = [];
+
+    for (const item of history) {
+      if (item.path && (await fs.pathExists(item.path))) {
+        existingHistory.push(item);
+      }
+    }
+
+    if (existingHistory.length !== history.length) {
+      await this.save({ history: existingHistory });
+    }
+
+    return existingHistory;
   }
 
   /**

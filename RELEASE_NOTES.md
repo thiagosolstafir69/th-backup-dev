@@ -1,5 +1,11 @@
 # Release Notes
 
+## v1.2.2
+
+- Corrige o erro ao revelar backups antigos que ja foram removidos pela regra de manter apenas um arquivo.
+- O historico remove entradas cujo arquivo fisico nao existe mais.
+- Se o ZIP antigo sumiu mas a pasta de destino existe, o app abre a pasta e mostra uma mensagem informativa.
+
 ## v1.2.1
 
 - Mantem apenas o backup mais recente em cada pasta de destino.

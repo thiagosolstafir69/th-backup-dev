@@ -445,14 +445,22 @@ window.addEventListener('DOMContentLoaded', async () => {
           const openResult = await window.backup.openBackupFile(path);
           if (!openResult.success) {
             setStatus(`Erro ao abrir arquivo: ${openResult.error}`, 'error');
+            currentHistory = [];
+            await renderBackupHistory();
           }
         });
 
         itemEl.querySelector('.reveal-btn').addEventListener('click', async (e) => {
           const path = e.currentTarget.dataset.path;
           const revealResult = await window.backup.revealInFinder(path);
-          if (!revealResult.success) {
+          if (revealResult.success && revealResult.fallback) {
+            setStatus(revealResult.message, 'idle');
+            currentHistory = [];
+            await renderBackupHistory();
+          } else if (!revealResult.success) {
             setStatus(`Erro ao revelar arquivo: ${revealResult.error}`, 'error');
+            currentHistory = [];
+            await renderBackupHistory();
           }
         });
 
