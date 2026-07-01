@@ -196,6 +196,44 @@ test('createBackup bloqueia destino dentro da origem', async () => {
   });
 });
 
+test('createBackup remove backups antigos do mesmo destino', async () => {
+  await withMockedConfig(async () => {
+    const workspaceDir = await makeTempDir('backup-dev-retention-');
+    const sourceDir = path.join(workspaceDir, 'source');
+    const destDir = path.join(workspaceDir, 'dest');
+
+    await fs.mkdir(sourceDir, { recursive: true });
+    await fs.mkdir(destDir, { recursive: true });
+    await fs.writeFile(path.join(sourceDir, 'app.js'), 'console.log("ok");\n');
+    await fs.writeFile(path.join(destDir, 'backup-developer-old.zip'), 'old backup\n');
+    await fs.writeFile(path.join(destDir, 'backup-developer-older.zip'), 'older backup\n');
+    await fs.writeFile(path.join(destDir, 'manual-file.zip'), 'unrelated\n');
+
+    const progressMessages = [];
+    const backupPath = await createBackup(
+      (message) => progressMessages.push(message),
+      sourceDir,
+      destDir,
+      false
+    );
+    const destFiles = await fs.readdir(destDir);
+    const appBackupFiles = destFiles.filter(
+      (name) => name.startsWith('backup-developer-') && name.endsWith('.zip')
+    );
+
+    assert.deepEqual(appBackupFiles, [path.basename(backupPath)]);
+    assert.equal(destFiles.includes('manual-file.zip'), true);
+    assert.equal(
+      progressMessages.some(
+        (message) => typeof message.text === 'string' && message.text.includes('antigo')
+      ),
+      true
+    );
+
+    await fs.rm(workspaceDir, { recursive: true, force: true });
+  });
+});
+
 test('previewBackup retorna resumo antes de compactar', async () => {
   await withMockedConfig(async () => {
     const workspaceDir = await makeTempDir('backup-dev-preview-');
@@ -286,6 +324,29 @@ test('config gerencia perfis e agenda de backup', async () => {
     assert.equal((await configManager.getActiveProfile()).id, firstProfile.id);
 
     await fs.rm(workspaceDir, { recursive: true, force: true });
+  });
+});
+
+test('config mantém apenas o histórico mais recente por destino', async () => {
+  await withTempConfigPath(async () => {
+    const destDir = path.join(os.tmpdir(), 'backup-dev-history-dest');
+
+    await configManager.addHistoryEntry({
+      id: 'old',
+      timestamp: new Date(0).toISOString(),
+      destDir,
+      path: path.join(destDir, 'backup-developer-old.zip')
+    });
+    await configManager.addHistoryEntry({
+      id: 'new',
+      timestamp: new Date().toISOString(),
+      destDir,
+      path: path.join(destDir, 'backup-developer-new.zip')
+    });
+
+    const history = await configManager.getHistory();
+    assert.equal(history.length, 1);
+    assert.equal(history[0].id, 'new');
   });
 });
 

@@ -528,6 +528,41 @@ const collectBackupPlan = async (sourceDir, includeXampp, ignoredDirs, onProgres
   };
 };
 
+const removePreviousBackups = async (destDir, currentBackupPath, onProgress) => {
+  const currentBackupName = path.basename(currentBackupPath);
+  const entries = await fs.readdir(destDir, { withFileTypes: true });
+  let removedCount = 0;
+
+  for (const entry of entries) {
+    if (!entry.isFile()) {
+      continue;
+    }
+
+    const isBackupFile =
+      entry.name.startsWith(FINAL_FILE_PREFIX) && entry.name.endsWith(FINAL_FILE_SUFFIX);
+    if (!isBackupFile || entry.name === currentBackupName) {
+      continue;
+    }
+
+    const oldBackupPath = path.join(destDir, entry.name);
+    try {
+      await fs.remove(oldBackupPath);
+      removedCount += 1;
+      onProgress({
+        type: 'status',
+        text: `Backup anterior removido: ${entry.name}`
+      });
+    } catch (error) {
+      onProgress({
+        type: 'status',
+        text: `Aviso: não foi possível remover backup anterior ${entry.name}: ${error.message}`
+      });
+    }
+  }
+
+  return removedCount;
+};
+
 const previewBackup = async (
   onProgress = () => {},
   sourceDir = null,
@@ -682,6 +717,13 @@ const createBackup = async (
       type: 'status',
       text: `Backup salvo em: ${finalZipPath}`
     });
+    const removedBackups = await removePreviousBackups(options.destDir, finalZipPath, update);
+    if (removedBackups > 0) {
+      update({
+        type: 'status',
+        text: `${removedBackups} backup(s) antigo(s) removido(s). Só o backup mais recente permanece no destino.`
+      });
+    }
     if (plan.skippedEntries.length > 0) {
       update({
         type: 'summary',

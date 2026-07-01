@@ -330,7 +330,7 @@ class ConfigManager {
    */
   async addHistoryEntry(entry) {
     const config = await this.load();
-    const history = config.history || [];
+    const history = (config.history || []).filter((item) => item.destDir !== entry.destDir);
     history.unshift(entry);
     // Limita o histórico a 15 itens
     if (history.length > 15) {

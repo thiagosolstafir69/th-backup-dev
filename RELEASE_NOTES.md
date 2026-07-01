@@ -1,5 +1,12 @@
 # Release Notes
 
+## v1.2.1
+
+- Mantem apenas o backup mais recente em cada pasta de destino.
+- Remove automaticamente ZIPs antigos `backup-developer-*.zip` depois que o backup novo termina.
+- O backup antigo so e removido apos sucesso do novo backup; falhas e cancelamentos preservam o arquivo anterior.
+- Historico passa a manter apenas a entrada mais recente por destino.
+
 ## v1.2.0
 
 - Perfis de backup com origem, destino, filtros, compactacao e XAMPP por perfil.
