@@ -9,10 +9,8 @@ const { DEFAULT_IGNORED_DIRS } = require('./constants');
 class ConfigManager {
   constructor() {
     this.configPath = path.join(os.homedir(), '.backup-developer-config.json');
-    // Valores padrão
-    this.defaultSourceDir = '/Users/thiago/Developer';
-    this.defaultDestDir =
-      '/Users/thiago/Library/CloudStorage/GoogleDrive-thiagowip@gmail.com/Meu Drive/Backup-developer';
+    this.defaultSourceDir = null;
+    this.defaultDestDir = null;
     this.defaultConfig = {
       sourceDir: this.defaultSourceDir,
       destDir: this.defaultDestDir,
@@ -66,7 +64,7 @@ class ConfigManager {
    */
   async getSourceDir() {
     const config = await this.load();
-    return config.sourceDir || this.defaultSourceDir;
+    return config.sourceDir || null;
   }
 
   /**
@@ -75,7 +73,7 @@ class ConfigManager {
    */
   async getDestDir() {
     const config = await this.load();
-    return config.destDir || this.defaultDestDir;
+    return config.destDir || null;
   }
 
   /**
@@ -111,7 +109,20 @@ class ConfigManager {
    * @returns {Promise<void>}
    */
   async setIgnoredDirs(dirs) {
-    await this.save({ ignoredDirs: dirs });
+    if (!Array.isArray(dirs)) {
+      throw new Error('A lista de pastas ignoradas deve ser um array.');
+    }
+
+    const normalizedDirs = [
+      ...new Set(
+        dirs
+          .map((dir) => (typeof dir === 'string' ? dir.trim() : ''))
+          .filter(Boolean)
+          .map((dir) => path.basename(dir))
+      )
+    ];
+
+    await this.save({ ignoredDirs: normalizedDirs });
   }
 
   /**
@@ -162,6 +173,9 @@ class ConfigManager {
    * @returns {Promise<void>}
    */
   async setTheme(theme) {
+    if (!['auto', 'light', 'dark'].includes(theme)) {
+      throw new Error('Tema inválido.');
+    }
     await this.save({ theme });
   }
 
@@ -180,7 +194,12 @@ class ConfigManager {
    * @returns {Promise<void>}
    */
   async setCompressionLevel(level) {
-    await this.save({ compressionLevel: level });
+    const normalizedLevel = Number(level);
+    if (!Number.isInteger(normalizedLevel) || normalizedLevel < 0 || normalizedLevel > 9) {
+      throw new Error('O nível de compactação deve ser um número inteiro entre 0 e 9.');
+    }
+
+    await this.save({ compressionLevel: normalizedLevel });
   }
 
   /**

@@ -26,11 +26,16 @@ const {
 } = require('./constants');
 const { generateTimestamp } = require('./utils/dateUtils');
 const { formatBytes } = require('./utils/formatUtils');
-const { validateAndNormalizePath, sanitizeFilename } = require('./utils/pathUtils');
+const {
+  validateAndNormalizePath,
+  isSameOrInsidePath,
+  sanitizeFilename
+} = require('./utils/pathUtils');
 const {
   BackupCancelledError,
   DirectoryNotFoundError,
-  PermissionDeniedError
+  PermissionDeniedError,
+  InvalidConfigError
 } = require('./errors/BackupError');
 
 const fsp = nativeFs.promises;
@@ -105,6 +110,7 @@ const checkPause = async (onProgress) => {
  */
 const collectDirectoryEntries = async (sourceDir, prefix, ignoredDirs, onProgress) => {
   const entries = [];
+  const skippedEntries = [];
   let totalSize = 0;
   let totalFiles = 0;
   const stack = [sourceDir];
@@ -123,7 +129,7 @@ const collectDirectoryEntries = async (sourceDir, prefix, ignoredDirs, onProgres
         return { fullPath, archivePath, stats };
       })
     );
-    for (const result of results) {
+    for (const [index, result] of results.entries()) {
       if (result.status === 'fulfilled') {
         totalSize += result.value.stats.size;
         entries.push({
@@ -131,6 +137,11 @@ const collectDirectoryEntries = async (sourceDir, prefix, ignoredDirs, onProgres
           fullPath: result.value.fullPath,
           archivePath: result.value.archivePath,
           stats: result.value.stats
+        });
+      } else {
+        skippedEntries.push({
+          path: batch[index].fullPath,
+          reason: result.reason?.message || 'Não foi possível ler o arquivo.'
         });
       }
     }
@@ -147,12 +158,17 @@ const collectDirectoryEntries = async (sourceDir, prefix, ignoredDirs, onProgres
         return { archivePath, linkTarget };
       })
     );
-    for (const result of results) {
+    for (const [index, result] of results.entries()) {
       if (result.status === 'fulfilled') {
         entries.push({
           type: 'symlink',
           archivePath: result.value.archivePath,
           linkTarget: result.value.linkTarget
+        });
+      } else {
+        skippedEntries.push({
+          path: batch[index].fullPath,
+          reason: result.reason?.message || 'Não foi possível ler o link simbólico.'
         });
       }
     }
@@ -231,12 +247,20 @@ const collectDirectoryEntries = async (sourceDir, prefix, ignoredDirs, onProgres
       }
     } catch (err) {
       if (err.code === 'EACCES') {
+        skippedEntries.push({
+          path: currentDir,
+          reason: 'Permissão negada.'
+        });
         onProgress({
           type: 'status',
           text: `Aviso: sem permissão para ler o diretório ${currentDir}. Pulando...`
         });
         continue;
       }
+      skippedEntries.push({
+        path: currentDir,
+        reason: err.message
+      });
       onProgress({
         type: 'status',
         text: `Aviso: não foi possível ler ${currentDir}: ${err.message}`
@@ -249,7 +273,7 @@ const collectDirectoryEntries = async (sourceDir, prefix, ignoredDirs, onProgres
   await flushPendingFiles();
   await flushPendingSymlinks();
 
-  return { entries, totalSize, totalFiles };
+  return { entries, skippedEntries, totalSize, totalFiles };
 };
 
 /**
@@ -412,7 +436,125 @@ const ensurePaths = async (sourceDir, destDir) => {
     throw new DirectoryNotFoundError(normalizedSource);
   }
 
+  const sourceStats = await fs.stat(normalizedSource);
+  if (!sourceStats.isDirectory()) {
+    throw new InvalidConfigError('A origem precisa ser uma pasta.');
+  }
+
+  if (isSameOrInsidePath(normalizedSource, normalizedDest)) {
+    throw new InvalidConfigError(
+      'A pasta de destino não pode ser igual à origem nem ficar dentro dela.'
+    );
+  }
+
   await fs.ensureDir(normalizedDest);
+
+  const destStats = await fs.stat(normalizedDest);
+  if (!destStats.isDirectory()) {
+    throw new InvalidConfigError('O destino precisa ser uma pasta.');
+  }
+
+  return {
+    sourceDir: normalizedSource,
+    destDir: normalizedDest
+  };
+};
+
+const resolveBackupOptions = async (sourceDir, destDir) => {
+  const config = await configManager.load();
+  const finalSourceDir = sourceDir || config.sourceDir || configManager.getDefaultSourceDir();
+  const finalDestDir = destDir || config.destDir || configManager.getDefaultDestDir();
+
+  if (!finalSourceDir || !finalDestDir) {
+    throw new InvalidConfigError('Selecione uma pasta de origem e uma pasta de destino.');
+  }
+
+  const normalizedPaths = await ensurePaths(finalSourceDir, finalDestDir);
+  const ignoredDirs = await configManager.getIgnoredDirs();
+  const compressionLevel = config.compressionLevel !== undefined ? config.compressionLevel : 1;
+
+  return {
+    ...normalizedPaths,
+    ignoredDirs,
+    compressionLevel
+  };
+};
+
+const getEntriesToBackup = async (sourceDir, includeXampp, onProgress) => {
+  const entriesToBackup = [{ path: sourceDir, prefix: '' }];
+
+  if (includeXampp) {
+    const xamppPath = '/Applications/XAMPP/xamppfiles/htdocs';
+    if (await fs.pathExists(xamppPath)) {
+      entriesToBackup.push({ path: xamppPath, prefix: 'xampp_htdocs' });
+    } else {
+      onProgress({
+        type: 'status',
+        text: 'Aviso: Pasta XAMPP selecionada mas não encontrada. Pulando...'
+      });
+    }
+  }
+
+  return entriesToBackup;
+};
+
+const collectBackupPlan = async (sourceDir, includeXampp, ignoredDirs, onProgress) => {
+  const collectedEntries = [];
+  const skippedEntries = [];
+  let grandTotalSize = 0;
+  let grandTotalFiles = 0;
+
+  const entriesToBackup = await getEntriesToBackup(sourceDir, includeXampp, onProgress);
+
+  for (const entry of entriesToBackup) {
+    onProgress({
+      type: 'status',
+      text: `Analisando: ${entry.path}...`
+    });
+    const { entries, skippedEntries: skipped, totalSize, totalFiles } =
+      await collectDirectoryEntries(entry.path, entry.prefix, ignoredDirs, onProgress);
+
+    appendAll(collectedEntries, entries);
+    appendAll(skippedEntries, skipped);
+    grandTotalSize += totalSize;
+    grandTotalFiles += totalFiles;
+  }
+
+  return {
+    entries: collectedEntries,
+    skippedEntries,
+    totalSize: grandTotalSize,
+    totalFiles: grandTotalFiles
+  };
+};
+
+const previewBackup = async (
+  onProgress = () => {},
+  sourceDir = null,
+  destDir = null,
+  includeXampp = false
+) => {
+  backupState.reset();
+  const options = await resolveBackupOptions(sourceDir, destDir);
+  const update = (payload) => onProgress(createProgressMessage(payload));
+
+  update({ type: 'status', text: 'Mapeando arquivos para gerar resumo...' });
+  const plan = await collectBackupPlan(
+    options.sourceDir,
+    includeXampp,
+    options.ignoredDirs,
+    update
+  );
+
+  return {
+    sourceDir: options.sourceDir,
+    destDir: options.destDir,
+    totalFiles: plan.totalFiles,
+    totalSize: plan.totalSize,
+    skippedCount: plan.skippedEntries.length,
+    skippedEntries: plan.skippedEntries.slice(0, 20),
+    ignoredDirs: Array.from(options.ignoredDirs)
+  };
 };
 
 /**
@@ -455,43 +597,16 @@ const createBackup = async (
 ) => {
   backupState.reset();
 
-  // Carrega configuração ou usa valores fornecidos
-  const config = await configManager.load();
-  const finalSourceDir = sourceDir || config.sourceDir || configManager.getDefaultSourceDir();
-  const finalDestDir = destDir || config.destDir || configManager.getDefaultDestDir();
-  const ignoredDirs = await configManager.getIgnoredDirs();
-  const compressionLevel = config.compressionLevel !== undefined ? config.compressionLevel : 1;
-
-  if (!finalSourceDir || !finalDestDir) {
-    throw new Error(
-      'Diretórios de origem e destino devem ser configurados. ' +
-        'Use a interface para selecionar as pastas.'
-    );
-  }
-
-  await ensurePaths(finalSourceDir, finalDestDir);
-
-  const entriesToBackup = [{ path: finalSourceDir, prefix: '' }];
-  if (includeXampp) {
-    const xamppPath = '/Applications/XAMPP/xamppfiles/htdocs';
-    if (await fs.pathExists(xamppPath)) {
-      entriesToBackup.push({ path: xamppPath, prefix: 'xampp_htdocs' });
-    } else {
-      onProgress({
-        type: 'status',
-        text: 'Aviso: Pasta XAMPP selecionada mas não encontrada. Pulando...'
-      });
-    }
-  }
+  const options = await resolveBackupOptions(sourceDir, destDir);
 
   const timestamp = generateTimestamp();
   const sanitizedTimestamp = sanitizeFilename(timestamp);
   const finalZipPath = path.join(
-    finalDestDir,
+    options.destDir,
     `${FINAL_FILE_PREFIX}${sanitizedTimestamp}${FINAL_FILE_SUFFIX}`
   );
   const tmpZipPath = path.join(
-    finalDestDir,
+    options.destDir,
     `${TEMP_FILE_PREFIX}${sanitizedTimestamp}${TEMP_FILE_SUFFIX}`
   );
 
@@ -520,25 +635,12 @@ const createBackup = async (
   try {
     update({ type: 'status', text: 'Mapeando arquivos e calculando o tamanho total...' });
 
-    const collectedEntries = [];
-    let grandTotalSize = 0;
-    let grandTotalFiles = 0;
-
-    for (const entry of entriesToBackup) {
-      update({
-        type: 'status',
-        text: `Analisando: ${entry.path}...`
-      });
-      const { entries, totalSize, totalFiles } = await collectDirectoryEntries(
-        entry.path,
-        entry.prefix,
-        ignoredDirs,
-        update
-      );
-      appendAll(collectedEntries, entries);
-      grandTotalSize += totalSize;
-      grandTotalFiles += totalFiles;
-    }
+    const plan = await collectBackupPlan(
+      options.sourceDir,
+      includeXampp,
+      options.ignoredDirs,
+      update
+    );
 
     if (backupState.getCancelled()) {
       await cleanup();
@@ -547,12 +649,19 @@ const createBackup = async (
 
     update({
       type: 'status',
-      text: `Total: ${grandTotalFiles} arquivos (${formatBytes(
-        grandTotalSize
+      text: `Total: ${plan.totalFiles} arquivos (${formatBytes(
+        plan.totalSize
       )}). Iniciando compactação...`
     });
 
-    await zipEntries(collectedEntries, tmpZipPath, grandTotalSize, compressionLevel, update);
+    if (plan.skippedEntries.length > 0) {
+      update({
+        type: 'status',
+        text: `${plan.skippedEntries.length} item(ns) não puderam ser lidos e serão pulados.`
+      });
+    }
+
+    await zipEntries(plan.entries, tmpZipPath, plan.totalSize, options.compressionLevel, update);
 
     if (backupState.getCancelled()) {
       await cleanup();
@@ -573,6 +682,14 @@ const createBackup = async (
       type: 'status',
       text: `Backup salvo em: ${finalZipPath}`
     });
+    if (plan.skippedEntries.length > 0) {
+      update({
+        type: 'summary',
+        skippedCount: plan.skippedEntries.length,
+        skippedEntries: plan.skippedEntries.slice(0, 20),
+        text: `Backup concluído com ${plan.skippedEntries.length} item(ns) pulados.`
+      });
+    }
     return finalZipPath;
   } catch (error) {
     await cleanup();
@@ -602,6 +719,7 @@ const cancelBackup = () => {
 
 module.exports = {
   createBackup,
+  previewBackup,
   togglePause,
   cancelBackup
 };

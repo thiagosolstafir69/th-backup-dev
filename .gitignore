@@ -6,6 +6,7 @@ node_modules
 .env.production.local
 electron-cache
 dist
+dist-new
 build
 *.dmg
 *.zip

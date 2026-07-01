@@ -27,6 +27,20 @@ const validateAndNormalizePath = (dirPath) => {
 };
 
 /**
+ * Verifica se dois caminhos apontam para o mesmo local ou se um está dentro do outro.
+ * @param {string} parentPath - Caminho base
+ * @param {string} childPath - Caminho a verificar
+ * @returns {boolean}
+ */
+const isSameOrInsidePath = (parentPath, childPath) => {
+  const parent = path.resolve(parentPath);
+  const child = path.resolve(childPath);
+  const relative = path.relative(parent, child);
+
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+};
+
+/**
  * Sanitiza nome de arquivo removendo caracteres inválidos
  * @param {string} filename - Nome do arquivo
  * @returns {string} Nome sanitizado
@@ -37,5 +51,6 @@ const sanitizeFilename = (filename) => {
 
 module.exports = {
   validateAndNormalizePath,
+  isSameOrInsidePath,
   sanitizeFilename
 };

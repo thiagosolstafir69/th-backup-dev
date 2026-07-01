@@ -1,8 +1,7 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Notification, clipboard } = require('electron');
 const path = require('path');
-const { createBackup, togglePause, cancelBackup } = require('./src/backup');
+const { createBackup, previewBackup, togglePause, cancelBackup } = require('./src/backup');
 const configManager = require('./src/config');
-const updater = require('./src/updater');
 const {
   BackupCancelledError,
   DirectoryNotFoundError,
@@ -30,33 +29,19 @@ function createWindow() {
   return mainWindow;
 }
 
-/**
- * Envia mensagem de atualização para o renderer
- * @param {string} event - Nome do evento
- * @param {Object} data - Dados a serem enviados
- */
-function sendUpdateMessage(event, data) {
-  if (mainWindow && mainWindow.webContents) {
-    mainWindow.webContents.send('update-message', { event, ...data });
+const getConfigPathValue = async (explicitValue, getter) => {
+  if (explicitValue) {
+    return explicitValue;
   }
-}
+
+  return getter();
+};
 
 app.whenReady().then(() => {
   if (process.platform === 'win32' || process.platform === 'darwin') {
     app.setAppUserModelId('com.thiago.backupdeveloper');
   }
   createWindow();
-
-  // Verifica atualizações ao iniciar (com delay de 3 segundos)
-  setTimeout(async () => {
-    try {
-      await updater.checkForUpdates((event, data) => {
-        sendUpdateMessage(event, data);
-      });
-    } catch (error) {
-      console.error('Erro ao verificar atualizações automáticas:', error);
-    }
-  }, 3000);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -116,6 +101,7 @@ ipcMain.handle(
     };
 
     try {
+      const startedAt = Date.now();
       sendProgress({ type: 'status', text: 'Iniciando backup...' });
       const backupPath = await createBackup(sendProgress, sourceDir, destDir, includeXampp);
       sendProgress({ type: 'status', text: 'Backup finalizado com sucesso!' });
@@ -134,9 +120,10 @@ ipcMain.handle(
       const historyEntry = {
         id: Date.now().toString(),
         timestamp: new Date().toISOString(),
-        sourceDir: sourceDir || (await configManager.getSourceDir()),
-        destDir: destDir || (await configManager.getDestDir()),
+        sourceDir: await getConfigPathValue(sourceDir, () => configManager.getSourceDir()),
+        destDir: await getConfigPathValue(destDir, () => configManager.getDestDir()),
         size: sizeText,
+        durationMs: Date.now() - startedAt,
         path: backupPath,
         success: true
       };
@@ -165,6 +152,23 @@ ipcMain.handle(
       }
 
       return { success: false, error: message };
+    }
+  }
+);
+
+ipcMain.handle(
+  'preview-backup',
+  async (event, sourceDir = null, destDir = null, includeXampp = false) => {
+    const sendProgress = (payload) => {
+      const message = normalizeProgressMessage(payload);
+      event.sender.send('backup-progress', message);
+    };
+
+    try {
+      const summary = await previewBackup(sendProgress, sourceDir, destDir, includeXampp);
+      return { success: true, summary };
+    } catch (error) {
+      return { success: false, error: getErrorMessage(error) };
     }
   }
 );
@@ -337,11 +341,20 @@ ipcMain.handle('reveal-in-finder', async (event, itemPath) => {
 });
 
 /**
- * Handler para definir preferência de tema
+ * Handler para abrir arquivo de backup
  */
-ipcMain.handle('set-theme', async (event, theme) => {
+ipcMain.handle('open-backup-file', async (event, itemPath) => {
   try {
-    await configManager.setTheme(theme);
+    const fs = require('fs-extra');
+    if (!(await fs.pathExists(itemPath))) {
+      return { success: false, error: 'Arquivo não encontrado' };
+    }
+
+    const errorMessage = await shell.openPath(itemPath);
+    if (errorMessage) {
+      return { success: false, error: errorMessage };
+    }
+
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -349,30 +362,23 @@ ipcMain.handle('set-theme', async (event, theme) => {
 });
 
 /**
- * Handler para verificar atualizações manualmente
+ * Handler para copiar texto para a área de transferência
  */
-ipcMain.handle('check-for-updates', async () => {
+ipcMain.handle('copy-text', async (event, text) => {
   try {
-    const update = await updater.checkForUpdates((event, data) => {
-      sendUpdateMessage(event, data);
-    });
-    return { success: true, update };
+    clipboard.writeText(String(text || ''));
+    return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
   }
 });
 
 /**
- * Handler para abrir página de download da atualização
+ * Handler para definir preferência de tema
  */
-ipcMain.handle('install-update', async (event, downloadUrl) => {
+ipcMain.handle('set-theme', async (event, theme) => {
   try {
-    if (downloadUrl) {
-      shell.openExternal(downloadUrl);
-      return { success: true };
-    }
-    // Se não tiver URL, abre a página de releases
-    shell.openExternal('https://github.com/thiagosolstafir69/th-backup-dev/releases/latest');
+    await configManager.setTheme(theme);
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };

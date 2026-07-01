@@ -6,9 +6,13 @@ const fs = require('node:fs/promises');
 const { spawnSync } = require('node:child_process');
 
 const configManager = require('../src/config');
-const { createBackup } = require('../src/backup');
-const { DirectoryNotFoundError } = require('../src/errors/BackupError');
-const { sanitizeFilename, validateAndNormalizePath } = require('../src/utils/pathUtils');
+const { createBackup, previewBackup } = require('../src/backup');
+const { DirectoryNotFoundError, InvalidConfigError } = require('../src/errors/BackupError');
+const {
+  isSameOrInsidePath,
+  sanitizeFilename,
+  validateAndNormalizePath
+} = require('../src/utils/pathUtils');
 const { formatBytes } = require('../src/utils/formatUtils');
 const { pad } = require('../src/utils/dateUtils');
 
@@ -44,6 +48,23 @@ const withMockedConfig = async (fn) => {
     configManager.load = originalLoad;
     configManager.getIgnoredDirs = originalGetIgnoredDirs;
     configManager.config = null;
+  }
+};
+
+const withTempConfigPath = async (fn) => {
+  const originalConfigPath = configManager.configPath;
+  const originalConfig = configManager.config;
+  const workspaceDir = await makeTempDir('backup-dev-config-');
+
+  configManager.configPath = path.join(workspaceDir, 'config.json');
+  configManager.config = null;
+
+  try {
+    await fn();
+  } finally {
+    configManager.configPath = originalConfigPath;
+    configManager.config = originalConfig;
+    await fs.rm(workspaceDir, { recursive: true, force: true });
   }
 };
 
@@ -153,12 +174,76 @@ test('createBackup lança erro quando o diretório de origem não existe', async
   });
 });
 
+test('createBackup bloqueia destino dentro da origem', async () => {
+  await withMockedConfig(async () => {
+    const workspaceDir = await makeTempDir('backup-dev-dest-inside-source-');
+    const sourceDir = path.join(workspaceDir, 'source');
+    const destDir = path.join(sourceDir, 'backups');
+
+    await fs.mkdir(sourceDir, { recursive: true });
+    await fs.writeFile(path.join(sourceDir, 'app.js'), 'console.log("ok");\n');
+
+    await assert.rejects(
+      () => createBackup(() => {}, sourceDir, destDir, false),
+      (error) => {
+        assert.equal(error instanceof InvalidConfigError, true);
+        assert.match(error.message, /destino não pode/);
+        return true;
+      }
+    );
+
+    await fs.rm(workspaceDir, { recursive: true, force: true });
+  });
+});
+
+test('previewBackup retorna resumo antes de compactar', async () => {
+  await withMockedConfig(async () => {
+    const workspaceDir = await makeTempDir('backup-dev-preview-');
+    const sourceDir = path.join(workspaceDir, 'source');
+    const destDir = path.join(workspaceDir, 'dest');
+
+    await fs.mkdir(path.join(sourceDir, 'src'), { recursive: true });
+    await fs.writeFile(path.join(sourceDir, 'src', 'app.js'), 'console.log("ok");\n');
+
+    const summary = await previewBackup(() => {}, sourceDir, destDir, false);
+
+    assert.equal(summary.totalFiles, 1);
+    assert.equal(summary.totalSize > 0, true);
+    assert.equal(summary.sourceDir, sourceDir);
+    assert.equal(summary.destDir, destDir);
+    assert.deepEqual(summary.skippedEntries, []);
+
+    await fs.rm(workspaceDir, { recursive: true, force: true });
+  });
+});
+
+test('config valida compactação e normaliza pastas ignoradas', async () => {
+  await withTempConfigPath(async () => {
+    await assert.rejects(
+      () => configManager.setCompressionLevel(10),
+      /nível de compactação/
+    );
+    await configManager.setCompressionLevel(9);
+    assert.equal(await configManager.getCompressionLevel(), 9);
+
+    await configManager.setIgnoredDirs(['node_modules', 'dist/', '/tmp/cache', '', 'dist']);
+    assert.deepEqual(Array.from(await configManager.getIgnoredDirs()), [
+      'node_modules',
+      'dist',
+      'cache'
+    ]);
+  });
+});
+
 test('utilitários formatam e sanitizam valores esperados', () => {
   const absolutePath = path.join(os.tmpdir(), 'backup-dev-utils');
 
   assert.equal(sanitizeFilename('backup:dev?.zip'), 'backup_dev_.zip');
   assert.equal(validateAndNormalizePath(absolutePath), absolutePath);
   assert.throws(() => validateAndNormalizePath(''), /Caminho inválido/);
+  assert.equal(isSameOrInsidePath('/tmp/project', '/tmp/project/backups'), true);
+  assert.equal(isSameOrInsidePath('/tmp/project', '/tmp/project'), true);
+  assert.equal(isSameOrInsidePath('/tmp/project', '/tmp/project-other'), false);
   assert.equal(formatBytes(0), '0 B');
   assert.equal(formatBytes(1536), '1.5 KB');
   assert.equal(pad(7), '07');
