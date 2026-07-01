@@ -1,3 +1,16 @@
+# Release Notes
+
+## v1.2.0
+
+- Perfis de backup com origem, destino, filtros, compactacao e XAMPP por perfil.
+- Backup programado diario ou semanal enquanto o app estiver aberto.
+- Presets de exclusao para Node.js, PHP/XAMPP, Python, Mobile e macOS.
+- Previa mais rica antes da execucao, com alerta para destino sincronizado na nuvem.
+- Historico com busca, perfil, tipo de execucao, duracao, abrir arquivo, revelar e copiar caminho.
+- Exportacao de relatorio JSON com historico, eventos da sessao e ultima previa.
+- Remocao completa da atualizacao automatica/manual.
+- Guia de distribuicao macOS em `docs/MAC_DISTRIBUTION.md`.
+
 # Release Notes v1.0.6
 
 ## 🚀 Nova Funcionalidade: Ignora node_modules Automaticamente

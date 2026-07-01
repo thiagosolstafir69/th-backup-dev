@@ -16,6 +16,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   const backupSummaryMain = document.getElementById('backup-summary-main');
   const backupSummaryDetail = document.getElementById('backup-summary-detail');
   const includeXamppCheckbox = document.getElementById('include-xampp-checkbox');
+  const profileSelect = document.getElementById('profile-select');
+  const profileNameInput = document.getElementById('profile-name-input');
+  const saveProfileButton = document.getElementById('save-profile-button');
+  const deleteProfileButton = document.getElementById('delete-profile-button');
+  const presetList = document.getElementById('preset-list');
+  const scheduleEnabledCheckbox = document.getElementById('schedule-enabled-checkbox');
+  const scheduleFrequencySelect = document.getElementById('schedule-frequency-select');
+  const scheduleWeekdaySelect = document.getElementById('schedule-weekday-select');
+  const scheduleTimeInput = document.getElementById('schedule-time-input');
+  const saveScheduleButton = document.getElementById('save-schedule-button');
+  const historySearchInput = document.getElementById('history-search-input');
+  const exportReportButton = document.getElementById('export-report-button');
 
   // Novos elementos de interação
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -51,7 +63,20 @@ window.addEventListener('DOMContentLoaded', async () => {
   let currentSourceDir = null;
   let currentDestDir = null;
   let currentIgnoredDirs = [];
+  let currentProfiles = [];
+  let currentActiveProfileId = null;
+  let currentSchedule = null;
+  let currentHistory = [];
+  let currentPresets = {};
+  let latestPreviewSummary = null;
+  let latestBackupPath = null;
+  let sessionEvents = [];
   let activeTheme = 'auto';
+
+  const setStatus = (message, type = 'idle') => {
+    statusTextContent.textContent = message;
+    statusText.dataset.state = type;
+  };
 
   const formatBytes = (bytes) => {
     if (!bytes) {
@@ -179,6 +204,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
+    latestPreviewSummary = summary;
     backupSummary.hidden = false;
     backupSummaryMain.textContent = `${summary.totalFiles} arquivos, ${formatBytes(
       summary.totalSize
@@ -186,7 +212,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     backupSummaryDetail.textContent = [
       `Destino: ${summary.destDir}`,
       `Pastas ignoradas: ${summary.ignoredDirs.join(', ') || 'nenhuma'}`,
-      summary.skippedCount > 0 ? `${summary.skippedCount} item(ns) serão pulados` : null
+      summary.skippedCount > 0 ? `${summary.skippedCount} item(ns) serão pulados` : null,
+      summary.destinationWarning,
+      summary.recentSimilarBackups?.length
+        ? `${summary.recentSimilarBackups.length} backup(s) parecido(s) no histórico`
+        : null
     ]
       .filter(Boolean)
       .join(' • ');
@@ -196,6 +226,111 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (backupSummary) {
       backupSummary.hidden = true;
     }
+    latestPreviewSummary = null;
+  };
+
+  const getActiveProfile = () => {
+    return currentProfiles.find((profile) => profile.id === currentActiveProfileId) || null;
+  };
+
+  const renderProfiles = (profiles, activeProfileId) => {
+    currentProfiles = profiles || [];
+    currentActiveProfileId = activeProfileId || currentProfiles[0]?.id || null;
+
+    if (!profileSelect) {
+      return;
+    }
+
+    profileSelect.innerHTML = '';
+    if (currentProfiles.length === 0) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'Principal';
+      profileSelect.appendChild(option);
+    } else {
+      currentProfiles.forEach((profile) => {
+        const option = document.createElement('option');
+        option.value = profile.id;
+        option.textContent = profile.name;
+        profileSelect.appendChild(option);
+      });
+    }
+    profileSelect.value = currentActiveProfileId || '';
+
+    const activeProfile = getActiveProfile();
+    if (profileNameInput) {
+      profileNameInput.value = activeProfile?.name || 'Principal';
+    }
+  };
+
+  const renderSchedule = (schedule) => {
+    currentSchedule = schedule || {
+      enabled: false,
+      frequency: 'daily',
+      time: '18:00',
+      weekday: 1,
+      profileId: null
+    };
+
+    if (scheduleEnabledCheckbox) {
+      scheduleEnabledCheckbox.checked = Boolean(currentSchedule.enabled);
+    }
+    if (scheduleFrequencySelect) {
+      scheduleFrequencySelect.value = currentSchedule.frequency || 'daily';
+    }
+    if (scheduleWeekdaySelect) {
+      scheduleWeekdaySelect.value = String(currentSchedule.weekday ?? 1);
+      scheduleWeekdaySelect.disabled = currentSchedule.frequency !== 'weekly';
+    }
+    if (scheduleTimeInput) {
+      scheduleTimeInput.value = currentSchedule.time || '18:00';
+    }
+  };
+
+  const renderPresets = (presets) => {
+    currentPresets = presets || {};
+    if (!presetList) {
+      return;
+    }
+
+    presetList.innerHTML = '';
+    Object.entries(currentPresets).forEach(([key, preset]) => {
+      const button = document.createElement('button');
+      button.className = 'preset-button';
+      button.type = 'button';
+      button.dataset.preset = key;
+      button.textContent = preset.label;
+      presetList.appendChild(button);
+    });
+  };
+
+  const applyConfig = (config) => {
+    updateSourcePath(config.sourceDir || null);
+    updateDestPath(config.destDir || null);
+    renderIgnoredDirs(config.ignoredDirs || []);
+    renderProfiles(config.profiles || [], config.activeProfileId || null);
+    renderSchedule(config.schedule);
+    applyTheme(config.theme || 'auto');
+
+    if (includeXamppCheckbox) {
+      includeXamppCheckbox.checked = Boolean(config.includeXampp);
+    }
+    if (compressionLevelSelect) {
+      compressionLevelSelect.value =
+        config.compressionLevel !== undefined ? String(config.compressionLevel) : '1';
+    }
+  };
+
+  const getProfilePayload = () => {
+    return {
+      id: currentActiveProfileId || undefined,
+      name: profileNameInput?.value.trim() || 'Principal',
+      sourceDir: currentSourceDir,
+      destDir: currentDestDir,
+      ignoredDirs: currentIgnoredDirs,
+      compressionLevel: compressionLevelSelect ? Number(compressionLevelSelect.value) : 1,
+      includeXampp: includeXamppCheckbox ? includeXamppCheckbox.checked : false
+    };
   };
 
   // === RENDERS INTERATIVOS (CHIPS E HISTÓRICO) ===
@@ -238,12 +373,24 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const renderBackupHistory = async () => {
     try {
-      const res = await window.backup.getBackupHistory();
-      if (!res.success) {
-        throw new Error(res.error);
+      if (currentHistory.length === 0) {
+        const res = await window.backup.getBackupHistory();
+        if (!res.success) {
+          throw new Error(res.error);
+        }
+        currentHistory = res.history || [];
       }
 
-      const history = res.history || [];
+      const query = (historySearchInput?.value || '').toLowerCase().trim();
+      const history = currentHistory.filter((item) => {
+        if (!query) {
+          return true;
+        }
+
+        return [item.profileName, item.sourceDir, item.destDir, item.path]
+          .filter(Boolean)
+          .some((value) => value.toLowerCase().includes(query));
+      });
       historyList.innerHTML = '';
 
       if (history.length === 0) {
@@ -261,6 +408,8 @@ window.addEventListener('DOMContentLoaded', async () => {
           <div class="history-item-details">
             <div class="history-item-title">${dateStr}</div>
             <div class="history-item-meta">
+              <span><strong>Perfil:</strong> ${item.profileName || 'Principal'}</span>
+              <span><strong>Tipo:</strong> ${item.trigger === 'scheduled' ? 'Agendado' : 'Manual'}</span>
               <span><strong>Tamanho:</strong> ${item.size}</span>
               <span><strong>Duração:</strong> ${formatDuration(item.durationMs)}</span>
               <span><strong>Origem:</strong> ${item.sourceDir || 'Não registrada'}</span>
@@ -353,6 +502,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       )
     ) {
       await window.backup.clearBackupHistory();
+      currentHistory = [];
       renderBackupHistory();
     }
   });
@@ -381,6 +531,118 @@ window.addEventListener('DOMContentLoaded', async () => {
   newIgnoredInput.addEventListener('keyup', (e) => {
     if (e.key === 'Enter') {
       handleAddIgnored();
+    }
+  });
+
+  profileSelect?.addEventListener('change', async () => {
+    const profileId = profileSelect.value;
+    if (!profileId) {
+      return;
+    }
+
+    const result = await window.backup.setActiveProfile(profileId);
+    if (result.success) {
+      applyConfig(result.config);
+      clearBackupSummary();
+      setStatus('Perfil aplicado.', 'success');
+    } else {
+      setStatus(`Erro ao aplicar perfil: ${result.error}`, 'error');
+    }
+  });
+
+  saveProfileButton?.addEventListener('click', async () => {
+    const result = await window.backup.saveProfile(getProfilePayload());
+    if (result.success) {
+      const config = await window.backup.getConfig();
+      applyConfig(config);
+      clearBackupSummary();
+      setStatus('Perfil salvo.', 'success');
+    } else {
+      setStatus(`Erro ao salvar perfil: ${result.error}`, 'error');
+    }
+  });
+
+  deleteProfileButton?.addEventListener('click', async () => {
+    if (!currentActiveProfileId || currentProfiles.length <= 1) {
+      setStatus('Mantenha pelo menos um perfil configurado.', 'error');
+      return;
+    }
+
+    if (!confirm('Excluir este perfil de backup?')) {
+      return;
+    }
+
+    const result = await window.backup.deleteProfile(currentActiveProfileId);
+    if (result.success) {
+      applyConfig(result.config);
+      clearBackupSummary();
+      setStatus('Perfil excluído.', 'success');
+    } else {
+      setStatus(`Erro ao excluir perfil: ${result.error}`, 'error');
+    }
+  });
+
+  presetList?.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-preset]');
+    if (!button) {
+      return;
+    }
+
+    const preset = currentPresets[button.dataset.preset];
+    const updatedDirs = [...new Set([...currentIgnoredDirs, ...(preset?.dirs || [])])];
+    await window.backup.setIgnoredDirs(updatedDirs);
+    renderIgnoredDirs(updatedDirs);
+    clearBackupSummary();
+    setStatus(`Preset ${preset.label} aplicado.`, 'success');
+  });
+
+  includeXamppCheckbox?.addEventListener('change', async () => {
+    await window.backup.setIncludeXampp(includeXamppCheckbox.checked);
+    clearBackupSummary();
+  });
+
+  scheduleFrequencySelect?.addEventListener('change', () => {
+    if (scheduleWeekdaySelect) {
+      scheduleWeekdaySelect.disabled = scheduleFrequencySelect.value !== 'weekly';
+    }
+  });
+
+  saveScheduleButton?.addEventListener('click', async () => {
+    const schedule = {
+      enabled: scheduleEnabledCheckbox?.checked || false,
+      frequency: scheduleFrequencySelect?.value || 'daily',
+      weekday: Number(scheduleWeekdaySelect?.value || 1),
+      time: scheduleTimeInput?.value || '18:00',
+      profileId: currentActiveProfileId
+    };
+    const result = await window.backup.setSchedule(schedule);
+    if (result.success) {
+      renderSchedule(result.schedule);
+      setStatus('Agenda salva.', 'success');
+    } else {
+      setStatus(`Erro ao salvar agenda: ${result.error}`, 'error');
+    }
+  });
+
+  historySearchInput?.addEventListener('input', () => {
+    renderBackupHistory();
+  });
+
+  exportReportButton?.addEventListener('click', async () => {
+    const report = {
+      generatedAt: new Date().toISOString(),
+      activeProfile: getActiveProfile(),
+      latestPreview: latestPreviewSummary,
+      latestBackupPath,
+      history: currentHistory,
+      events: sessionEvents
+    };
+    const result = await window.backup.exportBackupReport(report);
+    if (result.success) {
+      setStatus('Relatório exportado.', 'success');
+      appendProgress(`Relatório salvo em: ${result.path}`);
+    } else if (!result.cancelled) {
+      setStatus(`Erro ao exportar relatório: ${result.error}`, 'error');
     }
   });
 
@@ -460,20 +722,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   // === CARREGAMENTO DA CONFIGURAÇÃO ===
   const loadConfig = async () => {
     try {
-      const config = await window.backup.getConfig();
-
-      updateSourcePath(config.sourceDir || null);
-      updateDestPath(config.destDir || null);
-      renderIgnoredDirs(config.ignoredDirs);
-      applyTheme(config.theme || 'auto');
-      if (compressionLevelSelect) {
-        compressionLevelSelect.value =
-          config.compressionLevel !== undefined ? String(config.compressionLevel) : '1';
-      }
+      const [config, presets] = await Promise.all([
+        window.backup.getConfig(),
+        window.backup.getExclusionPresets()
+      ]);
+      renderPresets(presets);
+      applyConfig(config);
     } catch (error) {
       console.error('Erro ao carregar configuração:', error);
       updateSourcePath(null);
       updateDestPath(null);
+      renderProfiles([], null);
+      renderSchedule(null);
       applyTheme('auto');
       if (compressionLevelSelect) {
         compressionLevelSelect.value = '1';
@@ -491,6 +751,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     const item = document.createElement('li');
     item.textContent = message;
     progressList.prepend(item);
+    sessionEvents.unshift({
+      timestamp: new Date().toISOString(),
+      message
+    });
+    if (sessionEvents.length > 200) {
+      sessionEvents.pop();
+    }
   };
 
   const setProgress = (percent) => {
@@ -518,13 +785,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  const setStatus = (message, type = 'idle') => {
-    statusTextContent.textContent = message;
-    statusText.dataset.state = type;
-  };
-
   const resetProgress = () => {
     progressList.innerHTML = '';
+    sessionEvents = [];
     setProgress(0);
   };
 
@@ -616,7 +879,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       const shouldContinue = confirm(
         `Executar backup de ${previewResult.summary.totalFiles} arquivos (${formatBytes(
           previewResult.summary.totalSize
-        )})?\n\nDestino: ${previewResult.summary.destDir}`
+        )})?\n\nDestino: ${previewResult.summary.destDir}${
+          previewResult.summary.destinationWarning
+            ? `\n\nAtenção: ${previewResult.summary.destinationWarning}`
+            : ''
+        }`
       );
 
       if (!shouldContinue) {
@@ -635,8 +902,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       const result = await window.backup.start(sourceDir, destDir, includeXampp);
       if (result.success) {
+        latestBackupPath = result.path;
         setStatus('Backup concluído com sucesso!', 'success');
         appendProgress(`Arquivo criado em: ${result.path}`);
+        currentHistory = [];
         await renderBackupHistory(); // Atualiza a tabela do histórico
       } else {
         setStatus(`Erro: ${result.error}`, 'error');

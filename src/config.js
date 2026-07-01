@@ -2,6 +2,15 @@ const path = require('path');
 const os = require('os');
 const { DEFAULT_IGNORED_DIRS } = require('./constants');
 
+const DEFAULT_SCHEDULE = {
+  enabled: false,
+  frequency: 'daily',
+  time: '18:00',
+  weekday: 1,
+  profileId: null,
+  lastRunKey: null
+};
+
 /**
  * Gerenciador de configuração da aplicação
  * Permite armazenar e recuperar configurações do usuário
@@ -16,6 +25,9 @@ class ConfigManager {
       destDir: this.defaultDestDir,
       ignoredDirs: [...DEFAULT_IGNORED_DIRS],
       history: [],
+      profiles: [],
+      activeProfileId: null,
+      schedule: { ...DEFAULT_SCHEDULE },
       theme: 'auto',
       compressionLevel: 1
     };
@@ -35,13 +47,13 @@ class ConfigManager {
       const fs = require('fs-extra');
       if (await fs.pathExists(this.configPath)) {
         const data = await fs.readJson(this.configPath);
-        this.config = { ...this.defaultConfig, ...data };
+        this.config = this.normalizeConfig({ ...this.defaultConfig, ...data });
       } else {
-        this.config = { ...this.defaultConfig };
+        this.config = this.normalizeConfig({ ...this.defaultConfig });
       }
     } catch (error) {
       console.warn('Erro ao carregar configuração, usando padrões:', error.message);
-      this.config = { ...this.defaultConfig };
+      this.config = this.normalizeConfig({ ...this.defaultConfig });
     }
 
     return this.config;
@@ -54,8 +66,101 @@ class ConfigManager {
    */
   async save(newConfig) {
     const fs = require('fs-extra');
-    this.config = { ...this.config, ...newConfig };
+    this.config = this.normalizeConfig({ ...this.config, ...newConfig });
     await fs.writeJson(this.configPath, this.config, { spaces: 2 });
+  }
+
+  normalizeDirs(dirs) {
+    if (!Array.isArray(dirs)) {
+      return [...DEFAULT_IGNORED_DIRS];
+    }
+
+    return [
+      ...new Set(
+        dirs
+          .map((dir) => (typeof dir === 'string' ? dir.trim() : ''))
+          .filter(Boolean)
+          .map((dir) => path.basename(dir))
+      )
+    ];
+  }
+
+  normalizeProfile(profile, fallback = {}) {
+    const id = profile.id || fallback.id || `profile-${Date.now()}`;
+    return {
+      id,
+      name: profile.name || fallback.name || 'Principal',
+      sourceDir: profile.sourceDir || fallback.sourceDir || null,
+      destDir: profile.destDir || fallback.destDir || null,
+      ignoredDirs: this.normalizeDirs(profile.ignoredDirs || fallback.ignoredDirs),
+      compressionLevel:
+        typeof profile.compressionLevel === 'number'
+          ? profile.compressionLevel
+          : fallback.compressionLevel ?? 1,
+      includeXampp: Boolean(profile.includeXampp || fallback.includeXampp)
+    };
+  }
+
+  normalizeSchedule(schedule = {}) {
+    const normalized = { ...DEFAULT_SCHEDULE, ...schedule };
+    const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+    if (!['daily', 'weekly'].includes(normalized.frequency)) {
+      normalized.frequency = DEFAULT_SCHEDULE.frequency;
+    }
+    if (!timePattern.test(normalized.time)) {
+      normalized.time = DEFAULT_SCHEDULE.time;
+    }
+    normalized.weekday = Number(normalized.weekday);
+    if (!Number.isInteger(normalized.weekday) || normalized.weekday < 0 || normalized.weekday > 6) {
+      normalized.weekday = DEFAULT_SCHEDULE.weekday;
+    }
+    normalized.enabled = Boolean(normalized.enabled);
+    normalized.profileId = normalized.profileId || null;
+    normalized.lastRunKey = normalized.lastRunKey || null;
+
+    return normalized;
+  }
+
+  normalizeConfig(config) {
+    const profiles = Array.isArray(config.profiles)
+      ? config.profiles.map((profile) => this.normalizeProfile(profile))
+      : [];
+
+    if (profiles.length === 0 && (config.sourceDir || config.destDir)) {
+      profiles.push(
+        this.normalizeProfile({
+          id: 'default',
+          name: 'Principal',
+          sourceDir: config.sourceDir || null,
+          destDir: config.destDir || null,
+          ignoredDirs: config.ignoredDirs || DEFAULT_IGNORED_DIRS,
+          compressionLevel: config.compressionLevel,
+          includeXampp: config.includeXampp
+        })
+      );
+    }
+
+    const activeProfileId =
+      profiles.some((profile) => profile.id === config.activeProfileId)
+        ? config.activeProfileId
+        : profiles[0]?.id || null;
+    const activeProfile = profiles.find((profile) => profile.id === activeProfileId);
+
+    return {
+      ...config,
+      sourceDir: activeProfile?.sourceDir || config.sourceDir || null,
+      destDir: activeProfile?.destDir || config.destDir || null,
+      ignoredDirs: activeProfile?.ignoredDirs || this.normalizeDirs(config.ignoredDirs),
+      compressionLevel:
+        typeof activeProfile?.compressionLevel === 'number'
+          ? activeProfile.compressionLevel
+          : config.compressionLevel ?? 1,
+      includeXampp: Boolean(activeProfile?.includeXampp || config.includeXampp),
+      profiles,
+      activeProfileId,
+      schedule: this.normalizeSchedule(config.schedule)
+    };
   }
 
   /**
@@ -91,7 +196,7 @@ class ConfigManager {
    * @returns {Promise<void>}
    */
   async setSourceDir(dir) {
-    await this.save({ sourceDir: dir });
+    await this.updateActiveProfile({ sourceDir: dir });
   }
 
   /**
@@ -100,7 +205,7 @@ class ConfigManager {
    * @returns {Promise<void>}
    */
   async setDestDir(dir) {
-    await this.save({ destDir: dir });
+    await this.updateActiveProfile({ destDir: dir });
   }
 
   /**
@@ -109,20 +214,104 @@ class ConfigManager {
    * @returns {Promise<void>}
    */
   async setIgnoredDirs(dirs) {
-    if (!Array.isArray(dirs)) {
-      throw new Error('A lista de pastas ignoradas deve ser um array.');
+    await this.updateActiveProfile({ ignoredDirs: this.normalizeDirs(dirs) });
+  }
+
+  async getProfiles() {
+    const config = await this.load();
+    return config.profiles || [];
+  }
+
+  async getActiveProfile() {
+    const config = await this.load();
+    return config.profiles.find((profile) => profile.id === config.activeProfileId) || null;
+  }
+
+  async setActiveProfile(profileId) {
+    const config = await this.load();
+    const profile = config.profiles.find((item) => item.id === profileId);
+    if (!profile) {
+      throw new Error('Perfil não encontrado.');
+    }
+    await this.save({
+      activeProfileId: profile.id,
+      sourceDir: profile.sourceDir,
+      destDir: profile.destDir,
+      ignoredDirs: profile.ignoredDirs,
+      compressionLevel: profile.compressionLevel,
+      includeXampp: profile.includeXampp
+    });
+  }
+
+  async saveProfile(profile) {
+    const config = await this.load();
+    const id = profile.id || `profile-${Date.now()}`;
+    const normalizedProfile = this.normalizeProfile({ ...profile, id });
+    const profiles = config.profiles.filter((item) => item.id !== id);
+    profiles.push(normalizedProfile);
+    await this.save({
+      profiles,
+      activeProfileId: normalizedProfile.id,
+      sourceDir: normalizedProfile.sourceDir,
+      destDir: normalizedProfile.destDir,
+      ignoredDirs: normalizedProfile.ignoredDirs,
+      compressionLevel: normalizedProfile.compressionLevel,
+      includeXampp: normalizedProfile.includeXampp
+    });
+    return normalizedProfile;
+  }
+
+  async deleteProfile(profileId) {
+    const config = await this.load();
+    const profiles = config.profiles.filter((profile) => profile.id !== profileId);
+    const activeProfileId =
+      config.activeProfileId === profileId ? profiles[0]?.id || null : config.activeProfileId;
+    const activeProfile = profiles.find((profile) => profile.id === activeProfileId);
+
+    await this.save({
+      profiles,
+      activeProfileId,
+      sourceDir: activeProfile?.sourceDir || null,
+      destDir: activeProfile?.destDir || null,
+      ignoredDirs: activeProfile?.ignoredDirs || [...DEFAULT_IGNORED_DIRS],
+      compressionLevel: activeProfile?.compressionLevel ?? 1,
+      includeXampp: activeProfile?.includeXampp || false
+    });
+  }
+
+  async updateActiveProfile(changes) {
+    const config = await this.load();
+    let profiles = config.profiles || [];
+    let activeProfileId = config.activeProfileId;
+
+    if (!activeProfileId) {
+      const profile = this.normalizeProfile({
+        id: 'default',
+        name: 'Principal',
+        sourceDir: config.sourceDir,
+        destDir: config.destDir,
+        ignoredDirs: config.ignoredDirs,
+        compressionLevel: config.compressionLevel,
+        includeXampp: config.includeXampp
+      });
+      profiles = [profile];
+      activeProfileId = profile.id;
     }
 
-    const normalizedDirs = [
-      ...new Set(
-        dirs
-          .map((dir) => (typeof dir === 'string' ? dir.trim() : ''))
-          .filter(Boolean)
-          .map((dir) => path.basename(dir))
-      )
-    ];
+    profiles = profiles.map((profile) =>
+      profile.id === activeProfileId ? this.normalizeProfile({ ...profile, ...changes }) : profile
+    );
 
-    await this.save({ ignoredDirs: normalizedDirs });
+    const activeProfile = profiles.find((profile) => profile.id === activeProfileId);
+    await this.save({
+      profiles,
+      activeProfileId,
+      sourceDir: activeProfile?.sourceDir || null,
+      destDir: activeProfile?.destDir || null,
+      ignoredDirs: activeProfile?.ignoredDirs || [...DEFAULT_IGNORED_DIRS],
+      compressionLevel: activeProfile?.compressionLevel ?? 1,
+      includeXampp: activeProfile?.includeXampp || false
+    });
   }
 
   /**
@@ -199,7 +388,27 @@ class ConfigManager {
       throw new Error('O nível de compactação deve ser um número inteiro entre 0 e 9.');
     }
 
-    await this.save({ compressionLevel: normalizedLevel });
+    await this.updateActiveProfile({ compressionLevel: normalizedLevel });
+  }
+
+  async setIncludeXampp(includeXampp) {
+    await this.updateActiveProfile({ includeXampp: Boolean(includeXampp) });
+  }
+
+  async getSchedule() {
+    const config = await this.load();
+    return this.normalizeSchedule(config.schedule);
+  }
+
+  async setSchedule(schedule) {
+    const normalizedSchedule = this.normalizeSchedule(schedule);
+    await this.save({ schedule: normalizedSchedule });
+    return normalizedSchedule;
+  }
+
+  async setScheduleLastRunKey(lastRunKey) {
+    const schedule = await this.getSchedule();
+    await this.save({ schedule: { ...schedule, lastRunKey } });
   }
 
   /**

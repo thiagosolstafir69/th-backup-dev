@@ -22,6 +22,29 @@ const BYTES_DECIMAL_PLACES_THRESHOLD = 10;
 // Pastas ignoradas por padrão
 const DEFAULT_IGNORED_DIRS = ['node_modules', 'dist', 'build', '.DS_Store', '.git'];
 
+const EXCLUSION_PRESETS = {
+  node: {
+    label: 'Node.js',
+    dirs: ['node_modules', '.next', '.nuxt', 'coverage', 'dist', 'build']
+  },
+  php: {
+    label: 'PHP/XAMPP',
+    dirs: ['vendor', 'storage/logs', 'cache', '.phpunit.cache']
+  },
+  python: {
+    label: 'Python',
+    dirs: ['__pycache__', '.pytest_cache', '.mypy_cache', '.venv', 'venv', 'dist', 'build']
+  },
+  mobile: {
+    label: 'Mobile',
+    dirs: ['Pods', 'DerivedData', '.gradle', 'android/app/build', 'ios/build']
+  },
+  macos: {
+    label: 'macOS',
+    dirs: ['.DS_Store', '.Trash', '.Spotlight-V100', '.TemporaryItems']
+  }
+};
+
 // Nomes de arquivos
 const TEMP_FILE_PREFIX = '.backup-developer-';
 const TEMP_FILE_SUFFIX = '.partial.zip';
@@ -41,6 +64,7 @@ module.exports = {
   BYTES_UNITS,
   BYTES_DECIMAL_PLACES_THRESHOLD,
   DEFAULT_IGNORED_DIRS,
+  EXCLUSION_PRESETS,
   TEMP_FILE_PREFIX,
   TEMP_FILE_SUFFIX,
   FINAL_FILE_PREFIX,

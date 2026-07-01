@@ -235,6 +235,60 @@ test('config valida compactação e normaliza pastas ignoradas', async () => {
   });
 });
 
+test('config gerencia perfis e agenda de backup', async () => {
+  await withTempConfigPath(async () => {
+    const workspaceDir = await makeTempDir('backup-dev-profiles-');
+    const sourceA = path.join(workspaceDir, 'source-a');
+    const sourceB = path.join(workspaceDir, 'source-b');
+    const destA = path.join(workspaceDir, 'dest-a');
+    const destB = path.join(workspaceDir, 'dest-b');
+
+    const firstProfile = await configManager.saveProfile({
+      name: 'Projetos',
+      sourceDir: sourceA,
+      destDir: destA,
+      ignoredDirs: ['node_modules', 'coverage'],
+      compressionLevel: 1,
+      includeXampp: false
+    });
+    const secondProfile = await configManager.saveProfile({
+      name: 'Clientes',
+      sourceDir: sourceB,
+      destDir: destB,
+      ignoredDirs: ['vendor'],
+      compressionLevel: 5,
+      includeXampp: true
+    });
+
+    await configManager.setActiveProfile(firstProfile.id);
+    assert.equal(await configManager.getSourceDir(), sourceA);
+    assert.equal(await configManager.getDestDir(), destA);
+
+    await configManager.setActiveProfile(secondProfile.id);
+    assert.equal(await configManager.getSourceDir(), sourceB);
+    assert.equal(await configManager.getCompressionLevel(), 5);
+    assert.equal((await configManager.load()).includeXampp, true);
+
+    const schedule = await configManager.setSchedule({
+      enabled: true,
+      frequency: 'weekly',
+      weekday: 5,
+      time: '22:30',
+      profileId: secondProfile.id
+    });
+    assert.equal(schedule.enabled, true);
+    assert.equal(schedule.frequency, 'weekly');
+    assert.equal(schedule.weekday, 5);
+    assert.equal(schedule.time, '22:30');
+    assert.equal(schedule.profileId, secondProfile.id);
+
+    await configManager.deleteProfile(secondProfile.id);
+    assert.equal((await configManager.getActiveProfile()).id, firstProfile.id);
+
+    await fs.rm(workspaceDir, { recursive: true, force: true });
+  });
+});
+
 test('utilitários formatam e sanitizam valores esperados', () => {
   const absolutePath = path.join(os.tmpdir(), 'backup-dev-utils');
 

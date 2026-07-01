@@ -1,7 +1,10 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Notification, clipboard } = require('electron');
+const fs = require('fs-extra');
 const path = require('path');
 const { createBackup, previewBackup, togglePause, cancelBackup } = require('./src/backup');
 const configManager = require('./src/config');
+const { EXCLUSION_PRESETS } = require('./src/constants');
+const { formatBytes } = require('./src/utils/formatUtils');
 const {
   BackupCancelledError,
   DirectoryNotFoundError,
@@ -10,6 +13,9 @@ const {
 } = require('./src/errors/BackupError');
 
 let mainWindow = null;
+let scheduleTimer = null;
+let scheduledBackupRunning = false;
+let manualBackupRunning = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -37,11 +43,164 @@ const getConfigPathValue = async (explicitValue, getter) => {
   return getter();
 };
 
+const getDestinationWarning = (destDir) => {
+  if (!destDir) {
+    return null;
+  }
+
+  const normalized = destDir.toLowerCase();
+  if (
+    normalized.includes('icloud') ||
+    normalized.includes('googledrive') ||
+    normalized.includes('google drive') ||
+    normalized.includes('dropbox') ||
+    normalized.includes('onedrive')
+  ) {
+    return 'O destino parece estar em uma pasta sincronizada na nuvem. Aguarde a sincronização terminar antes de remover backups antigos.';
+  }
+
+  return null;
+};
+
+const getRunKey = (date, frequency) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  if (frequency === 'weekly') {
+    const firstDay = new Date(year, 0, 1);
+    const pastDays = Math.floor((date - firstDay) / 86400000);
+    const week = String(Math.ceil((pastDays + firstDay.getDay() + 1) / 7)).padStart(2, '0');
+    return `${year}-W${week}`;
+  }
+
+  return `${year}-${month}-${day}`;
+};
+
+const isScheduleDue = (schedule, date = new Date()) => {
+  if (!schedule.enabled) {
+    return false;
+  }
+
+  const [hour, minute] = schedule.time.split(':').map(Number);
+  const scheduledMinutes = hour * 60 + minute;
+  const currentMinutes = date.getHours() * 60 + date.getMinutes();
+
+  if (currentMinutes < scheduledMinutes) {
+    return false;
+  }
+
+  if (schedule.frequency === 'weekly' && date.getDay() !== Number(schedule.weekday)) {
+    return false;
+  }
+
+  return schedule.lastRunKey !== getRunKey(date, schedule.frequency);
+};
+
+const addHistoryForBackup = async ({ backupPath, sourceDir, destDir, startedAt, trigger, profile }) => {
+  let sizeText = 'N/A';
+  try {
+    const stats = await fs.stat(backupPath);
+    sizeText = formatBytes(stats.size);
+  } catch (err) {
+    console.error('Erro ao obter tamanho do backup:', err);
+  }
+
+  const historyEntry = {
+    id: Date.now().toString(),
+    timestamp: new Date().toISOString(),
+    sourceDir,
+    destDir,
+    size: sizeText,
+    durationMs: Date.now() - startedAt,
+    path: backupPath,
+    success: true,
+    trigger,
+    profileId: profile?.id || null,
+    profileName: profile?.name || null
+  };
+  await configManager.addHistoryEntry(historyEntry);
+  return historyEntry;
+};
+
+const notify = (title, body) => {
+  if (Notification.isSupported()) {
+    new Notification({ title, body }).show();
+  }
+};
+
+const runScheduledBackup = async () => {
+  if (scheduledBackupRunning || manualBackupRunning) {
+    return;
+  }
+
+  const schedule = await configManager.getSchedule();
+  if (!isScheduleDue(schedule)) {
+    return;
+  }
+
+  const profiles = await configManager.getProfiles();
+  const profile =
+    profiles.find((item) => item.id === schedule.profileId) ||
+    (await configManager.getActiveProfile());
+
+  if (!profile?.sourceDir || !profile?.destDir) {
+    await configManager.setScheduleLastRunKey(getRunKey(new Date(), schedule.frequency));
+    notify('Backup agendado não executado', 'Configure origem e destino para o perfil agendado.');
+    return;
+  }
+
+  scheduledBackupRunning = true;
+  const startedAt = Date.now();
+
+  try {
+    const backupPath = await createBackup(
+      (message) => {
+        if (mainWindow && mainWindow.webContents) {
+          mainWindow.webContents.send('backup-progress', normalizeProgressMessage(message));
+        }
+      },
+      profile.sourceDir,
+      profile.destDir,
+      profile.includeXampp
+    );
+    await addHistoryForBackup({
+      backupPath,
+      sourceDir: profile.sourceDir,
+      destDir: profile.destDir,
+      startedAt,
+      trigger: 'scheduled',
+      profile
+    });
+    await configManager.setScheduleLastRunKey(getRunKey(new Date(), schedule.frequency));
+    notify('Backup agendado concluído', `${profile.name}: ${path.basename(backupPath)}`);
+  } catch (error) {
+    notify('Falha no backup agendado', getErrorMessage(error));
+  } finally {
+    scheduledBackupRunning = false;
+  }
+};
+
+const startScheduleTimer = () => {
+  if (scheduleTimer) {
+    clearInterval(scheduleTimer);
+  }
+  scheduleTimer = setInterval(() => {
+    runScheduledBackup().catch((error) => {
+      console.error('Erro no agendamento de backup:', error);
+    });
+  }, 60000);
+  runScheduledBackup().catch((error) => {
+    console.error('Erro no agendamento de backup:', error);
+  });
+};
+
 app.whenReady().then(() => {
   if (process.platform === 'win32' || process.platform === 'darwin') {
     app.setAppUserModelId('com.thiago.backupdeveloper');
   }
   createWindow();
+  startScheduleTimer();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -101,41 +260,25 @@ ipcMain.handle(
     };
 
     try {
+      manualBackupRunning = true;
       const startedAt = Date.now();
       sendProgress({ type: 'status', text: 'Iniciando backup...' });
       const backupPath = await createBackup(sendProgress, sourceDir, destDir, includeXampp);
       sendProgress({ type: 'status', text: 'Backup finalizado com sucesso!' });
 
-      // Adiciona a entrada ao histórico
-      let sizeText = 'N/A';
-      try {
-        const fs = require('fs-extra');
-        const stats = await fs.stat(backupPath);
-        const { formatBytes } = require('./src/utils/formatUtils');
-        sizeText = formatBytes(stats.size);
-      } catch (err) {
-        console.error('Erro ao obter tamanho do backup:', err);
-      }
+      const activeProfile = await configManager.getActiveProfile();
+      const finalSourceDir = await getConfigPathValue(sourceDir, () => configManager.getSourceDir());
+      const finalDestDir = await getConfigPathValue(destDir, () => configManager.getDestDir());
+      await addHistoryForBackup({
+        backupPath,
+        sourceDir: finalSourceDir,
+        destDir: finalDestDir,
+        startedAt,
+        trigger: 'manual',
+        profile: activeProfile
+      });
 
-      const historyEntry = {
-        id: Date.now().toString(),
-        timestamp: new Date().toISOString(),
-        sourceDir: await getConfigPathValue(sourceDir, () => configManager.getSourceDir()),
-        destDir: await getConfigPathValue(destDir, () => configManager.getDestDir()),
-        size: sizeText,
-        durationMs: Date.now() - startedAt,
-        path: backupPath,
-        success: true
-      };
-      await configManager.addHistoryEntry(historyEntry);
-
-      // Dispara notificação nativa
-      if (Notification.isSupported()) {
-        new Notification({
-          title: '✓ Backup Concluído',
-          body: `O arquivo foi salvo com sucesso em: ${path.basename(backupPath)}`
-        }).show();
-      }
+      notify('✓ Backup Concluído', `O arquivo foi salvo com sucesso em: ${path.basename(backupPath)}`);
 
       return { success: true, path: backupPath };
     } catch (error) {
@@ -143,15 +286,11 @@ ipcMain.handle(
       sendProgress({ type: 'status', text: `Falha no backup: ${message}` });
       dialog.showErrorBox('Erro no Backup', message);
 
-      // Dispara notificação nativa de erro
-      if (Notification.isSupported()) {
-        new Notification({
-          title: '❌ Falha no Backup',
-          body: message
-        }).show();
-      }
+      notify('❌ Falha no Backup', message);
 
       return { success: false, error: message };
+    } finally {
+      manualBackupRunning = false;
     }
   }
 );
@@ -166,6 +305,11 @@ ipcMain.handle(
 
     try {
       const summary = await previewBackup(sendProgress, sourceDir, destDir, includeXampp);
+      const history = await configManager.getHistory();
+      summary.destinationWarning = getDestinationWarning(summary.destDir);
+      summary.recentSimilarBackups = history
+        .filter((item) => item.sourceDir === summary.sourceDir && item.destDir === summary.destDir)
+        .slice(0, 3);
       return { success: true, summary };
     } catch (error) {
       return { success: false, error: getErrorMessage(error) };
@@ -270,9 +414,65 @@ ipcMain.handle('get-config', async () => {
     sourceDir: config.sourceDir,
     destDir: config.destDir,
     ignoredDirs: config.ignoredDirs ? Array.from(config.ignoredDirs) : [],
+    includeXampp: Boolean(config.includeXampp),
+    profiles: config.profiles || [],
+    activeProfileId: config.activeProfileId || null,
+    schedule: config.schedule,
     theme: config.theme || 'auto',
     compressionLevel: config.compressionLevel !== undefined ? config.compressionLevel : 1
   };
+});
+
+ipcMain.handle('get-exclusion-presets', async () => {
+  return EXCLUSION_PRESETS;
+});
+
+ipcMain.handle('save-profile', async (event, profile) => {
+  try {
+    const savedProfile = await configManager.saveProfile(profile);
+    return { success: true, profile: savedProfile };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('set-active-profile', async (event, profileId) => {
+  try {
+    await configManager.setActiveProfile(profileId);
+    const config = await configManager.load();
+    return { success: true, config };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('delete-profile', async (event, profileId) => {
+  try {
+    await configManager.deleteProfile(profileId);
+    const config = await configManager.load();
+    return { success: true, config };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('set-include-xampp', async (event, includeXampp) => {
+  try {
+    await configManager.setIncludeXampp(includeXampp);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('set-schedule', async (event, schedule) => {
+  try {
+    const savedSchedule = await configManager.setSchedule(schedule);
+    startScheduleTimer();
+    return { success: true, schedule: savedSchedule };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
 
 /**
@@ -318,6 +518,25 @@ ipcMain.handle('clear-backup-history', async () => {
   try {
     await configManager.clearHistory();
     return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('export-backup-report', async (event, report) => {
+  try {
+    const result = await dialog.showSaveDialog({
+      title: 'Exportar relatório de backup',
+      defaultPath: `backup-report-${new Date().toISOString().slice(0, 10)}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    });
+
+    if (result.canceled || !result.filePath) {
+      return { cancelled: true };
+    }
+
+    await fs.writeJson(result.filePath, report, { spaces: 2 });
+    return { success: true, path: result.filePath };
   } catch (error) {
     return { success: false, error: error.message };
   }
